@@ -643,6 +643,17 @@ void logger::start() {
     if (i != file_name_.end()) {
       std::stringstream date_stream;
       render_date(date_stream, t0_);
+      auto date_str = date_stream.str();
+      auto t_pos = date_str.find_first_of("T");
+      date_str = date_str.substr(0, t_pos);
+      file_name_.replace(i, i + sizeof(date) - 1, date_str);
+    }
+    const char date[] = "[DATETIME]";
+    i = std::search(file_name_.begin(), file_name_.end(), std::begin(date),
+                    std::end(date) - 1);
+    if (i != file_name_.end()) {
+      std::stringstream date_stream;
+      render_date(date_stream, t0_);
       file_name_.replace(i, i + sizeof(date) - 1, date_stream.str());
     }
     const char node[] = "[NODE]";
