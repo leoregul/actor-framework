@@ -616,8 +616,15 @@ void logger::start() {
       return;
   } else {
     // Replace placeholders.
+    const char cdn_id[] = "[CDN]";
+    auto i = std::search(file_name_.begin(), file_name_.end(), std::begin(cdn_id),
+                         std::end(cdn_id) - 1);
+    if (i != file_name_.end()) {
+      auto id = get_or(system_.config(), "cdn-id", "0");
+      file_name_.replace(i, i + sizeof(cdn_id) - 1, id);
+    }
     const char pid[] = "[PID]";
-    auto i = std::search(file_name_.begin(), file_name_.end(), std::begin(pid),
+    i = std::search(file_name_.begin(), file_name_.end(), std::begin(pid),
                          std::end(pid) - 1);
     if (i != file_name_.end()) {
       auto id = std::to_string(detail::get_process_id());
@@ -629,6 +636,14 @@ void logger::start() {
     if (i != file_name_.end()) {
       auto t0_str = timestamp_to_string(t0_);
       file_name_.replace(i, i + sizeof(ts) - 1, t0_str);
+    }
+    const char date[] = "[DATE]";
+    i = std::search(file_name_.begin(), file_name_.end(), std::begin(date),
+                    std::end(date) - 1);
+    if (i != file_name_.end()) {
+      std::stringstream date_stream;
+      render_date(date_stream, t0_);
+      file_name_.replace(i, i + sizeof(date) - 1, date_stream.str());
     }
     const char node[] = "[NODE]";
     i = std::search(file_name_.begin(), file_name_.end(), std::begin(node),
