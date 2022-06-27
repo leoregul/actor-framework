@@ -321,6 +321,8 @@ private:
 
   void stop();
 
+  bool init_file_name();
+
   // -- member variables -------------------------------------------------------
 
   // Configures verbosity and output generation.
@@ -362,6 +364,8 @@ private:
 
   // Executes `logger::run`.
   std::thread thread_;
+
+  int current_day_ = 0;
 };
 
 CAF_CORE_EXPORT std::string to_string(logger::field_type x);

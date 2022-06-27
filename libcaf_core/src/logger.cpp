@@ -341,6 +341,9 @@ bool logger::open_file() {
     std::cerr << "unable to open log file " << file_name_ << std::endl;
     return false;
   }
+  auto t = std::time(NULL);
+  tm *now = std::gmtime(&t);
+  current_day_ = now->tm_mday;
   return true;
 }
 
@@ -517,6 +520,9 @@ void logger::run() {
   if (!open_file() && console_verbosity() == CAF_LOG_LEVEL_QUIET)
     return;
   log_first_line();
+
+  auto is_log_rotation_enabled = get_or(system_.config(), "without-log-rotation", "false") == "false";
+
   // Loop until receiving an empty message.
   for (;;) {
     // Handle current head of the queue.
@@ -529,6 +535,21 @@ void logger::run() {
     // Prepare next iteration.
     queue_.pop_front();
     queue_.wait_nonempty();
+
+    if (is_log_rotation_enabled) {
+      auto t = std::time(NULL);
+      tm *now = std::gmtime(&t);
+      if (current_day_ != now->tm_mday) {
+        log_last_line();
+        file_.close();
+        t0_ = make_timestamp();
+        if (!init_file_name())
+          return;
+        if (!open_file() && console_verbosity() == CAF_LOG_LEVEL_QUIET)
+          return;
+        log_first_line();  
+      }
+    }
   }
 }
 
@@ -608,12 +629,45 @@ void logger::start() {
   parent_thread_ = std::this_thread::get_id();
   if (verbosity() == CAF_LOG_LEVEL_QUIET)
     return;
+  if (!init_file_name())
+    return;
+  if (cfg_.inline_output) {
+    // Open file immediately for inline output.
+    open_file();
+    log_first_line();
+  } else {
+    // Note: we don't call system_->launch_thread here since we don't want to
+    //       set a logger context in the logger thread.
+    auto f = [this](auto guard) {
+      CAF_IGNORE_UNUSED(guard);
+      detail::set_thread_name("caf.logger");
+      system_.thread_started();
+      run();
+      system_.thread_terminates();
+    };
+    thread_ = std::thread{f, detail::global_meta_objects_guard()};
+  }
+}
+
+void logger::stop() {
+  if (cfg_.inline_output) {
+    log_last_line();
+    return;
+  }
+  if (!thread_.joinable())
+    return;
+  // A default-constructed event causes the logger to shutdown.
+  queue_.push_back(event{});
+  thread_.join();
+}
+
+bool logger::init_file_name() {
   file_name_ = get_or(system_.config(), "caf.logger.file.path",
                       defaults::logger::file::path);
   if (file_name_.empty()) {
     // No need to continue if console and log file are disabled.
     if (console_verbosity() == CAF_LOG_LEVEL_QUIET)
-      return;
+      return false;
   } else {
     // Replace placeholders.
     const char cdn_id[] = "[CDN]";
@@ -648,13 +702,13 @@ void logger::start() {
       date_str = date_str.substr(0, t_pos);
       file_name_.replace(i, i + sizeof(date) - 1, date_str);
     }
-    const char date[] = "[DATETIME]";
-    i = std::search(file_name_.begin(), file_name_.end(), std::begin(date),
-                    std::end(date) - 1);
+    const char datetime[] = "[DATETIME]";
+    i = std::search(file_name_.begin(), file_name_.end(), std::begin(datetime),
+                    std::end(datetime) - 1);
     if (i != file_name_.end()) {
       std::stringstream date_stream;
       render_date(date_stream, t0_);
-      file_name_.replace(i, i + sizeof(date) - 1, date_stream.str());
+      file_name_.replace(i, i + sizeof(datetime) - 1, date_stream.str());
     }
     const char node[] = "[NODE]";
     i = std::search(file_name_.begin(), file_name_.end(), std::begin(node),
@@ -664,34 +718,7 @@ void logger::start() {
       file_name_.replace(i, i + sizeof(node) - 1, nid);
     }
   }
-  if (cfg_.inline_output) {
-    // Open file immediately for inline output.
-    open_file();
-    log_first_line();
-  } else {
-    // Note: we don't call system_->launch_thread here since we don't want to
-    //       set a logger context in the logger thread.
-    auto f = [this](auto guard) {
-      CAF_IGNORE_UNUSED(guard);
-      detail::set_thread_name("caf.logger");
-      system_.thread_started();
-      run();
-      system_.thread_terminates();
-    };
-    thread_ = std::thread{f, detail::global_meta_objects_guard()};
-  }
-}
-
-void logger::stop() {
-  if (cfg_.inline_output) {
-    log_last_line();
-    return;
-  }
-  if (!thread_.joinable())
-    return;
-  // A default-constructed event causes the logger to shutdown.
-  queue_.push_back(event{});
-  thread_.join();
+  return true;
 }
 
 std::string to_string(logger::field_type x) {

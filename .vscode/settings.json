@@ -8,6 +8,12 @@
     "typeinfo": "cpp",
     "*.inc": "cpp",
     "chrono": "cpp",
-    "iosfwd": "cpp"
+    "iosfwd": "cpp",
+    "fstream": "cpp",
+    "type_traits": "cpp",
+    "bitset": "cpp",
+    "cstdlib": "cpp",
+    "shared_mutex": "cpp",
+    "regex": "cpp"
   }
 }
