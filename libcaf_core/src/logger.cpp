@@ -41,9 +41,13 @@ thread_local actor_id current_actor_id;
 // Stores a pointer to the system-wide logger.
 thread_local intrusive_ptr<logger> current_logger_ptr;
 
+// constexpr std::string_view log_level_name[] = {
+//   "QUIET", "",     "", "ERROR", "",      "", "WARN", "",
+//   "",      "INFO", "", "",      "DEBUG", "", "",     "TRACE",
+// };
 constexpr std::string_view log_level_name[] = {
-  "QUIET", "",     "", "ERROR", "",      "", "WARN", "",
-  "",      "INFO", "", "",      "DEBUG", "", "",     "TRACE",
+  "Q", "",     "", "E", "",      "", "W", "",
+  "",      "I", "", "",      "D", "", "",     "T",
 };
 
 constexpr std::string_view fun_prefixes[] = {
