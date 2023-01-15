@@ -15,7 +15,6 @@
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_actor.hpp"
-#include "caf/replies_to.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/type_id_list.hpp"
 #include "caf/typed_actor_view_base.hpp"
@@ -302,7 +301,8 @@ bool operator!=(std::nullptr_t, const typed_actor<Xs...>& x) noexcept {
 /// Returns a new actor that implements the composition `f.g(x) = f(g(x))`.
 /// @relates typed_actor
 template <class... Xs, class... Ys>
-composed_type_t<detail::type_list<Xs...>, detail::type_list<Ys...>>
+[[deprecated]] composed_type_t<detail::type_list<Xs...>,
+                               detail::type_list<Ys...>>
 operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
   using result
     = composed_type_t<detail::type_list<Xs...>, detail::type_list<Ys...>>;

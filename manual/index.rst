@@ -21,9 +21,8 @@ Contents
    ReferenceCounting
    Error
    ConfiguringActorApplications
-   GroupCommunication
    ManagingGroupsOfWorkers
-   Streaming
+   DataFlows
    Testing
    Metrics
 

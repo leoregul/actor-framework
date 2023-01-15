@@ -15,7 +15,7 @@ namespace {
 
 // Worth mentioning: the output we check against is the trivial format produced
 // by stringify(), which is not valid JSON due to trailing commas.
-constexpr std::pair<string_view, string_view> baselines[] = {
+constexpr std::pair<std::string_view, std::string_view> baselines[] = {
   {
     R"({})",
     R"({})",
@@ -96,13 +96,19 @@ void stringify(std::string& str, size_t, bool val) {
     str += "false";
 }
 
-void stringify(std::string& str, size_t, string_view val) {
+void stringify(std::string& str, size_t, std::string_view val) {
   str.push_back('"');
   str.insert(str.end(), val.begin(), val.end());
   str.push_back('"');
 }
 
 void stringify(std::string& str, size_t, detail::json::null_t) {
+  str += "null";
+}
+
+void stringify(std::string& str, size_t, detail::json::undefined_t) {
+  // The parser never emits undefined objects, but we still need to provide an
+  // overload for this type.
   str += "null";
 }
 

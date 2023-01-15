@@ -19,10 +19,13 @@ struct fixture {
   expected<std::string>
   to_json_string(T&& x, size_t indentation,
                  bool skip_empty_fields
-                 = json_writer::skip_empty_fields_default) {
+                 = json_writer::skip_empty_fields_default,
+                 bool skip_object_type_annotation
+                 = json_writer::skip_object_type_annotation_default) {
     json_writer writer;
     writer.indentation(indentation);
     writer.skip_empty_fields(skip_empty_fields);
+    writer.skip_object_type_annotation(skip_object_type_annotation);
     if (writer.apply(std::forward<T>(x))) {
       auto buf = writer.str();
       return {std::string{buf.begin(), buf.end()}};
@@ -129,6 +132,12 @@ SCENARIO("the JSON writer converts simple structs to strings") {
         CHECK_EQ(to_json_string(x, 0), out);
       }
     }
+    WHEN("converting it to JSON with indentation factor 0 and omitting @type") {
+      THEN("the JSON output is a single line") {
+        std::string out = R"_({"a": 10, "b": "foo"})_";
+        CHECK_EQ(to_json_string(x, 0, false, true), out);
+      }
+    }
     WHEN("converting it to JSON with indentation factor 2") {
       THEN("the JSON output uses multiple lines") {
         std::string out = R"_({
@@ -137,6 +146,15 @@ SCENARIO("the JSON writer converts simple structs to strings") {
   "b": "foo"
 })_";
         CHECK_EQ(to_json_string(x, 2), out);
+      }
+    }
+    WHEN("converting it to JSON with indentation factor 2 and omitting @type") {
+      THEN("the JSON output uses multiple lines") {
+        std::string out = R"_({
+  "a": 10,
+  "b": "foo"
+})_";
+        CHECK_EQ(to_json_string(x, 2, false, true), out);
       }
     }
   }
@@ -291,6 +309,35 @@ SCENARIO("the JSON writer annotates variant fields") {
   }
 })";
         CHECK_EQ(to_json_string(x, 2), out);
+      }
+    }
+  }
+}
+
+SCENARIO("the JSON compresses empty lists and objects") {
+  GIVEN("a map with an empty list value") {
+    std::map<std::string, std::vector<int>> obj;
+    obj["xs"] = std::vector<int>{};
+    obj["ys"] = std::vector<int>{1, 2, 3};
+    WHEN("converting it to JSON with indentation factor 2") {
+      THEN("the JSON contains a compressed representation of the empty list") {
+        std::string out = R"({
+  "xs": [],
+  "ys": [
+    1,
+    2,
+    3
+  ]
+})";
+        CHECK_EQ(to_json_string(obj, 2, true, true), out);
+      }
+    }
+  }
+  GIVEN("an empty map") {
+    std::map<std::string, std::vector<int>> obj;
+    WHEN("converting it to JSON with indentation factor 2") {
+      THEN("the JSON contains a compressed representation of the empty map") {
+        CHECK_EQ(to_json_string(obj, 2, true, true), "{}"s);
       }
     }
   }

@@ -12,6 +12,8 @@
 
 #define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
 
+CAF_PUSH_DEPRECATED_WARNING
+
 using namespace caf;
 
 namespace {
@@ -23,8 +25,8 @@ behavior testee(event_based_actor* self) {
   };
 }
 
-using first_stage = typed_actor<replies_to<int>::with<double, double>>;
-using second_stage = typed_actor<replies_to<double, double>::with<double>>;
+using first_stage = typed_actor<result<double, double>(int)>;
+using second_stage = typed_actor<result<double>(double, double)>;
 
 first_stage::behavior_type typed_first_stage() {
   return {
@@ -150,3 +152,5 @@ CAF_TEST(dot_composition_2) {
 }
 
 END_FIXTURE_SCOPE()
+
+CAF_POP_WARNINGS

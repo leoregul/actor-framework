@@ -13,7 +13,6 @@
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/parser/read_config.hpp"
 #include "caf/none.hpp"
-#include "caf/optional.hpp"
 
 using namespace std::string_literals;
 
@@ -47,7 +46,7 @@ struct fixture {
   }
 };
 
-config_value unpack(const settings& x, string_view key) {
+config_value unpack(const settings& x, std::string_view key) {
   if (auto i = x.find(key); i != x.end())
     return i->second;
   else
@@ -55,8 +54,8 @@ config_value unpack(const settings& x, string_view key) {
 }
 
 template <class... Ts>
-config_value
-unpack(const settings& x, string_view key, const char* next_key, Ts... keys) {
+config_value unpack(const settings& x, std::string_view key,
+                    const char* next_key, Ts... keys) {
   if (auto i = x.find(key); i == x.end())
     return {};
   else if (auto ptr = get_if<settings>(std::addressof(i->second)))
@@ -81,7 +80,7 @@ BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(put) {
   put(x, "foo", "bar");
-  put(x, "logger.console", "none");
+  put(x, "logger.console", config_value{"none"});
   put(x, "one.two.three", "four");
   CHECK_EQ(x.size(), 3u);
   CHECK(x.contains("foo"));
@@ -163,7 +162,7 @@ CAF_TEST(read_config accepts the to_string output of settings) {
   settings y;
   config_option_set dummy;
   detail::config_consumer consumer{dummy, y};
-  string_view str_view = str;
+  std::string_view str_view = str;
   string_parser_state res{str_view.begin(), str_view.end()};
   detail::parser::read_config(res, consumer);
   CHECK(res.i == res.e);
@@ -193,6 +192,17 @@ SCENARIO("put_missing normalizes 'global' suffixes") {
       }
     }
   }
+}
+
+TEST_CASE("put and put_missing decomposes user-defined types") {
+  settings uut;
+  put(uut, "dummy", dummy_struct{42, "foo"});
+  CHECK_EQ(get_as<int>(uut, "dummy.a"), 42);
+  CHECK_EQ(get_as<std::string>(uut, "dummy.b"), "foo"s);
+  uut.clear();
+  put_missing(uut, "dummy", dummy_struct{23, "bar"});
+  CHECK_EQ(get_as<int>(uut, "dummy.a"), 23);
+  CHECK_EQ(get_as<std::string>(uut, "dummy.b"), "bar"s);
 }
 
 END_FIXTURE_SCOPE()

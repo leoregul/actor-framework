@@ -23,7 +23,6 @@
 #include "caf/detail/latch.hpp"
 #include "caf/detail/prometheus_broker.hpp"
 #include "caf/detail/ripemd_160.hpp"
-#include "caf/detail/safe_equal.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/function_view.hpp"
@@ -43,6 +42,7 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
+#include "caf/thread_owner.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
 #ifdef CAF_WINDOWS
@@ -150,7 +150,8 @@ public:
       sync_ptr->count_down();
       mpx_.run();
     };
-    thread_ = mpx_.system().launch_thread("caf.io.prom", run_mpx);
+    thread_ = mpx_.system().launch_thread("caf.io.prom", thread_owner::system,
+                                          run_mpx);
     sync.wait();
     CAF_LOG_INFO("expose Prometheus metrics at port" << actual_port);
     return actual_port;
@@ -421,14 +422,17 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
 
 void middleman::start() {
   CAF_LOG_TRACE("");
-  // Launch background tasks.
-  if (auto prom = get_if<config_value::dictionary>(
-        &system().config(), "caf.middleman.prometheus-http")) {
-    auto ptr = std::make_unique<prometheus_scraping>(system());
-    if (auto port = ptr->start(*prom)) {
-      CAF_ASSERT(*port != 0);
-      prometheus_scraping_port_ = *port;
-      background_tasks_.emplace_back(std::move(ptr));
+  // Launch background tasks unless caf-net is also available. In that case, the
+  // net::middleman takes care of these.
+  if (!system().has_network_manager()) {
+    if (auto prom = get_if<config_value::dictionary>(
+          &system().config(), "caf.middleman.prometheus-http")) {
+      auto ptr = std::make_unique<prometheus_scraping>(system());
+      if (auto port = ptr->start(*prom)) {
+        CAF_ASSERT(*port != 0);
+        prometheus_scraping_port_ = *port;
+        background_tasks_.emplace_back(std::move(ptr));
+      }
     }
   }
   // Launch backend.
@@ -446,7 +450,8 @@ void middleman::start() {
       sync_ptr->count_down();
       backend().run();
     };
-    thread_ = system().launch_thread("caf.io.mpx", run_backend);
+    thread_ = system().launch_thread("caf.io.mpx", thread_owner::system,
+                                     run_backend);
     sync.wait();
   }
   // Spawn utility actors.

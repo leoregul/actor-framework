@@ -12,35 +12,36 @@
 
 #include "caf/event_based_actor.hpp"
 #include "caf/policy/select_all.hpp"
+#include "caf/result.hpp"
 
 using namespace caf;
 
 namespace {
 
-using discarding_server_type = typed_actor<replies_to<int, int>::with<void>>;
+using discarding_server_type = typed_actor<result<void>(int, int)>;
 
-using adding_server_type = typed_actor<replies_to<int, int>::with<int>>;
+using adding_server_type = typed_actor<result<int>(int, int)>;
 
-using result_type = variant<none_t, unit_t, int>;
+using result_type = std::variant<none_t, unit_t, int>;
 
 struct fixture : test_coordinator_fixture<> {
-  fixture() {
-    result = std::make_shared<result_type>(none);
-    discarding_server = make_server([](int, int) {});
-    adding_server = make_server([](int x, int y) { return x + y; });
-    run();
-  }
-
   template <class F>
-  auto make_server(F f)
-    -> typed_actor<replies_to<int, int>::with<decltype(f(1, 2))>> {
-    using impl = typed_actor<replies_to<int, int>::with<decltype(f(1, 2))>>;
+  auto make_server(F f) {
+    using res_t = caf::result<decltype(f(1, 2))>;
+    using impl = typed_actor<res_t(int, int)>;
     auto init = [f]() -> typename impl::behavior_type {
       return {
         [f](int x, int y) { return f(x, y); },
       };
     };
     return sys.spawn(init);
+  }
+
+  fixture() {
+    result = std::make_shared<result_type>(none);
+    discarding_server = make_server([](int, int) {});
+    adding_server = make_server([](int x, int y) { return x + y; });
+    run();
   }
 
   template <class T>
@@ -217,6 +218,119 @@ SCENARIO("request.await enforces a processing order") {
         expect((std::string), from(self).to(client).with("hello")); // at last
       }
     }
+  }
+}
+
+// The GH-1299 worker processes int32 and string messages but alternates between
+// processing either type.
+
+using log_ptr = std::shared_ptr<std::string>;
+
+behavior gh1299_worker_bhvr1(caf::event_based_actor* self, log_ptr log);
+
+behavior gh1299_worker_bhvr2(caf::event_based_actor* self, log_ptr log);
+
+behavior gh1299_worker(caf::event_based_actor* self, log_ptr log) {
+  self->set_default_handler(skip);
+  return gh1299_worker_bhvr1(self, log);
+}
+
+behavior gh1299_worker_bhvr1(caf::event_based_actor* self, log_ptr log) {
+  return {
+    [self, log](int32_t x) {
+      *log += "int: ";
+      *log += std::to_string(x);
+      *log += '\n';
+      self->become(gh1299_worker_bhvr2(self, log));
+    },
+  };
+}
+
+behavior gh1299_worker_bhvr2(caf::event_based_actor* self, log_ptr log) {
+  return {
+    [self, log](const std::string& x) {
+      *log += "string: ";
+      *log += x;
+      *log += '\n';
+      self->become(gh1299_worker_bhvr1(self, log));
+    },
+  };
+}
+
+TEST_CASE("GH-1299 regression non-blocking") {
+  SUBTEST("HIGH (skip) -> NORMAL") {
+    auto log = std::make_shared<std::string>();
+    auto worker = sys.spawn(gh1299_worker, log);
+    scoped_actor self{sys};
+    self->send<message_priority::high>(worker, "hi there");
+    run();
+    self->send(worker, int32_t{123});
+    run();
+    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
+  }
+  SUBTEST("NORMAL (skip) -> HIGH") {
+    auto log = std::make_shared<std::string>();
+    auto worker = sys.spawn(gh1299_worker, log);
+    scoped_actor self{sys};
+    self->send(worker, "hi there");
+    run();
+    self->send<message_priority::high>(worker, int32_t{123});
+    run();
+    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
+  }
+}
+
+void gh1299_recv(scoped_actor& self, log_ptr log, int& tag) {
+  bool fin = false;
+  for (;;) {
+    if (tag == 0) {
+      self->receive(
+        [log, &tag](int32_t x) {
+          *log += "int: ";
+          *log += std::to_string(x);
+          *log += '\n';
+          tag = 1;
+        },
+        after(timespan{0}) >> [&fin] { fin = true; });
+      if (fin)
+        return;
+    } else {
+      self->receive(
+        [log, &tag](const std::string& x) {
+          *log += "string: ";
+          *log += x;
+          *log += '\n';
+          tag = 0;
+        },
+        after(timespan{0}) >> [&fin] { fin = true; });
+      if (fin)
+        return;
+    }
+  }
+}
+
+TEST_CASE("GH-1299 regression blocking") {
+  SUBTEST("HIGH (skip) -> NORMAL") {
+    auto log = std::make_shared<std::string>();
+    auto tag = 0;
+    scoped_actor sender{sys};
+    scoped_actor self{sys};
+    sender->send<message_priority::high>(self, "hi there");
+    gh1299_recv(self, log, tag);
+    sender->send(self, int32_t{123});
+    gh1299_recv(self, log, tag);
+    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
+  }
+  SUBTEST("NORMAL (skip) -> HIGH") {
+    auto log = std::make_shared<std::string>();
+    auto tag = 0;
+    scoped_actor sender{sys};
+    scoped_actor self{sys};
+    sender->send(self, "hi there");
+    gh1299_recv(self, log, tag);
+    sender->send<message_priority::high>(self, int32_t{123});
+    gh1299_recv(self, log, tag);
+    CHECK_EQ(*log, "int: 123\nstring: hi there\n");
   }
 }
 

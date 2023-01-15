@@ -7,8 +7,8 @@
 #include "caf/deserializer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/json.hpp"
-#include "caf/string_view.hpp"
 
+#include <string_view>
 #include <variant>
 
 namespace caf {
@@ -56,7 +56,7 @@ public:
     }
   };
 
-  using json_key = string_view;
+  using json_key = std::string_view;
 
   using value_type
     = std::variant<const detail::json::value*, const detail::json::object*,
@@ -82,7 +82,7 @@ public:
   // -- constants --------------------------------------------------------------
 
   /// The value value for `field_type_suffix()`.
-  static constexpr string_view field_type_suffix_default = "-type";
+  static constexpr std::string_view field_type_suffix_default = "-type";
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -103,13 +103,23 @@ public:
   /// Returns the suffix for generating type annotation fields for variant
   /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"
   /// for a variant field called "foo".
-  [[nodiscard]] string_view field_type_suffix() const noexcept {
+  [[nodiscard]] std::string_view field_type_suffix() const noexcept {
     return field_type_suffix_;
   }
 
   /// Configures whether the writer omits empty fields.
-  void field_type_suffix(string_view suffix) noexcept {
+  void field_type_suffix(std::string_view suffix) noexcept {
     field_type_suffix_ = suffix;
+  }
+
+  /// Returns the type ID mapper used by the writer.
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
+    return mapper_;
+  }
+
+  /// Changes the type ID mapper for the writer.
+  void mapper(const type_id_mapper* ptr) noexcept {
+    mapper_ = ptr;
   }
 
   // -- modifiers --------------------------------------------------------------
@@ -121,7 +131,18 @@ public:
   ///          Hence, the buffer pointed to by the string view must remain valid
   ///          until either destroying this reader or calling `reset`.
   /// @note Implicitly calls `reset`.
-  bool load(string_view json_text);
+  bool load(std::string_view json_text);
+
+  /// Parses the content of the file under the given @p path. After loading the
+  /// content of the JSON file, the reader is ready for attempting to
+  /// deserialize inspectable objects.
+  /// @note Implicitly calls `reset`.
+  bool load_file(const char* path);
+
+  /// @copydoc load_file
+  bool load_file(const std::string& path) {
+    return load_file(path.c_str());
+  }
 
   /// Reverts the state of the reader back to where it was after calling `load`.
   /// @post The reader is ready for attempting to deserialize another
@@ -135,20 +156,20 @@ public:
 
   bool fetch_next_object_type(type_id_t& type) override;
 
-  bool fetch_next_object_name(string_view& type_name) override;
+  bool fetch_next_object_name(std::string_view& type_name) override;
 
-  bool begin_object(type_id_t type, string_view name) override;
+  bool begin_object(type_id_t type, std::string_view name) override;
 
   bool end_object() override;
 
-  bool begin_field(string_view) override;
+  bool begin_field(std::string_view) override;
 
-  bool begin_field(string_view name, bool& is_present) override;
+  bool begin_field(std::string_view name, bool& is_present) override;
 
-  bool begin_field(string_view name, span<const type_id_t> types,
+  bool begin_field(std::string_view name, span<const type_id_t> types,
                    size_t& index) override;
 
-  bool begin_field(string_view name, bool& is_present,
+  bool begin_field(std::string_view name, bool& is_present,
                    span<const type_id_t> types, size_t& index) override;
 
   bool end_field() override;
@@ -169,7 +190,7 @@ public:
 
   bool end_associative_array() override;
 
-  bool value(byte& x) override;
+  bool value(std::byte& x) override;
 
   bool value(bool& x) override;
 
@@ -201,10 +222,16 @@ public:
 
   bool value(std::u32string& x) override;
 
-  bool value(span<byte> x) override;
+  bool value(span<std::byte> x) override;
 
 private:
   [[nodiscard]] position pos() const noexcept;
+
+  void append_current_field_name(std::string& str);
+
+  std::string current_field_name();
+
+  std::string mandatory_field_missing_str(std::string_view name);
 
   template <bool PopOrAdvanceOnSuccess, class F>
   bool consume(const char* fun_name, F f);
@@ -237,7 +264,16 @@ private:
 
   detail::json::value* root_ = nullptr;
 
-  string_view field_type_suffix_ = field_type_suffix_default;
+  std::string_view field_type_suffix_ = field_type_suffix_default;
+
+  /// Keeps track of the current field for better debugging output.
+  std::vector<std::string_view> field_;
+
+  /// The mapper implementation we use by default.
+  default_type_id_mapper default_mapper_;
+
+  /// Configures which ID mapper we use to translate between type IDs and names.
+  const type_id_mapper* mapper_ = &default_mapper_;
 };
 
 } // namespace caf

@@ -9,6 +9,7 @@
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/thread_owner.hpp"
 
 namespace caf::detail {
 
@@ -16,11 +17,8 @@ thread_safe_actor_clock::thread_safe_actor_clock() {
   tbl_.reserve(buffer_size * 2);
 }
 
-disposable
-thread_safe_actor_clock::schedule_periodically(time_point first_run, action f,
-                                               duration_type period) {
-  auto ptr = schedule_entry_ptr{new schedule_entry{first_run, f, period}};
-  queue_.emplace_back(std::move(ptr));
+disposable thread_safe_actor_clock::schedule(time_point abs_time, action f) {
+  queue_.emplace_back(schedule_entry_ptr{new schedule_entry{abs_time, f}});
   return std::move(f).as_disposable();
 }
 
@@ -29,6 +27,7 @@ void thread_safe_actor_clock::run() {
   auto is_disposed = [](auto& x) { return !x || x->f.disposed(); };
   auto by_timeout = [](auto& x, auto& y) { return x->t < y->t; };
   while (running_) {
+    // Fetch additional scheduling requests from the queue.
     if (tbl_.empty()) {
       queue_.wait_nonempty();
       queue_.get_all(std::back_inserter(tbl_));
@@ -40,30 +39,22 @@ void thread_safe_actor_clock::run() {
         std::sort(tbl_.begin(), tbl_.end(), by_timeout);
       }
     }
+    // Run all actions that timed out.
     auto n = now();
-    for (auto i = tbl_.begin(); i != tbl_.end() && (*i)->t <= n; ++i) {
-      auto& entry = **i;
-      if (entry.f.run() == action::transition::success) {
-        if (entry.period.count() > 0) {
-          auto next = entry.t + entry.period;
-          while (next <= n) {
-            CAF_LOG_WARNING("clock lagging behind, skipping a tick!");
-            next += entry.period;
-          }
-        } else {
-          i->reset(); // Remove from tbl_ after the for-loop body.
-        }
-      } else {
-        i->reset(); // Remove from tbl_ after the for-loop body.
-      }
-    }
-    tbl_.erase(std::remove_if(tbl_.begin(), tbl_.end(), is_disposed),
-               tbl_.end());
+    auto i = tbl_.begin();
+    for (; i != tbl_.end() && (*i)->t <= n; ++i)
+      (*i)->f.run();
+    // Here, we have [begin, i) be the actions that were executed. Move any
+    // already disposed action also to the beginning so that we can erase them
+    // at once.
+    i = std::stable_partition(i, tbl_.end(), is_disposed);
+    tbl_.erase(tbl_.begin(), i);
   }
 }
 
 void thread_safe_actor_clock::start_dispatch_loop(caf::actor_system& sys) {
-  dispatcher_ = sys.launch_thread("caf.clock", [this] { run(); });
+  dispatcher_ = sys.launch_thread("caf.clock", thread_owner::system,
+                                  [this] { run(); });
 }
 
 void thread_safe_actor_clock::stop_dispatch_loop() {
