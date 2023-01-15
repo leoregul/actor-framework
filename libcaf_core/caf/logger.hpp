@@ -140,6 +140,7 @@ public:
     category_field,
     class_name_field,
     date_field,
+    time_field,
     file_field,
     line_field,
     message_field,
@@ -246,6 +247,9 @@ public:
 
   /// Renders the date of `x` in ISO 8601 format.
   static void render_date(std::ostream& out, timestamp x);
+
+  /// Renders the time of `x`.
+  static void render_time(std::ostream& out, timestamp x);
 
   /// Parses `format_str` into a format description vector.
   /// @warning The returned vector can have pointers into `format_str`.

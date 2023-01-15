@@ -415,6 +415,18 @@ void logger::render_date(std::ostream& out, timestamp x) {
   detail::print(adapter, x);
 }
 
+void logger::render_time(std::ostream& out, timestamp x) {
+  std::stringstream date_stream;
+  print_adapter adapter{date_stream};
+  detail::print(adapter, x);
+  auto time_str = date_stream.str();
+  auto t_pos = time_str.find_first_of("T");
+  if (t_pos != string::npos) {
+    time_str = time_str.substr(t_pos + 1);
+  }
+  out << time_str;
+}
+
 void logger::render(std::ostream& out, const line_format& lf,
                     const event& x) const {
   auto ms_time_diff = [](timestamp t0, timestamp tn) {
@@ -427,6 +439,7 @@ void logger::render(std::ostream& out, const line_format& lf,
       case category_field:     out << x.category_name;             break;
       case class_name_field:   render_fun_prefix(out, x);          break;
       case date_field:         render_date(out, x.tstamp);         break;
+      case time_field:         render_time(out, x.tstamp);         break;
       case file_field:         out << x.file_name;                 break;
       case line_field:         out << x.line_number;               break;
       case message_field:      out << x.message;                   break;
@@ -456,7 +469,8 @@ logger::line_format logger::parse_format(const std::string& format_str) {
         case 'c': ft = category_field;     break;
         case 'C': ft = class_name_field;   break;
         case 'd': ft = date_field;         break;
-        case 'F': ft =  file_field;        break;
+        case 'T': ft = time_field;         break;
+        case 'F': ft = file_field;         break;
         case 'L': ft = line_field;         break;
         case 'm': ft = message_field;      break;
         case 'M': ft = method_field;       break;
