@@ -421,7 +421,7 @@ void logger::render_time(std::ostream& out, timestamp x) {
   detail::print(adapter, x);
   auto time_str = date_stream.str();
   auto t_pos = time_str.find_first_of("T");
-  if (t_pos != string::npos) {
+  if (t_pos != std::string::npos) {
     time_str = time_str.substr(t_pos + 1);
   }
   out << time_str;
