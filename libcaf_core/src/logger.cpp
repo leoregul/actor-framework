@@ -536,18 +536,19 @@ void logger::run() {
     queue_.pop_front();
     queue_.wait_nonempty();
 
-    if (is_log_rotation_enabled) {
+    if (file_verbosity() > CAF_LOG_LEVEL_QUIET && is_log_rotation_enabled && !file_name_.empty()) {
       auto t = std::time(NULL);
       tm *now = std::gmtime(&t);
       if (current_day_ != now->tm_mday) {
-        log_last_line();
+        // log_last_line();
         file_.close();
         t0_ = make_timestamp();
         if (!init_file_name())
           return;
-        if (!open_file() && console_verbosity() == CAF_LOG_LEVEL_QUIET)
+        if (open_file())
+          log_first_line();
+        else if (console_verbosity() == CAF_LOG_LEVEL_QUIET)
           return;
-        log_first_line();  
       }
     }
   }
