@@ -647,6 +647,33 @@ public:
     return run_scheduled(time_point_cast<duration_t>(when), make_action(what));
   }
 
+  /// Runs `what` asynchronously at some point after `when` if the actor still
+  /// exists. The callback is going to hold a weak reference to the actor, i.e.,
+  /// does not prevent the actor to become unreachable.
+  /// @param when The local time until the actor waits before invoking the
+  ///             action. Due to scheduling delays, there will always be some
+  ///             additional wait time. Passing the current time or a past time
+  ///             immediately schedules the action for execution.
+  /// @param what The action to invoke after waiting on the timeout.
+  /// @returns A @ref disposable that allows the actor to cancel the action.
+  template <class Duration, class F>
+  disposable run_scheduled_weak(
+    std::chrono::time_point<std::chrono::system_clock, Duration> when, F what) {
+    using std::chrono::time_point_cast;
+    return run_scheduled_weak(time_point_cast<timespan>(when),
+                              make_action(what));
+  }
+
+  /// @copydoc run_scheduled_weak
+  template <class Duration, class F>
+  disposable run_scheduled_weak(
+    std::chrono::time_point<actor_clock::clock_type, Duration> when, F what) {
+    using std::chrono::time_point_cast;
+    using duration_t = actor_clock::duration_type;
+    return run_scheduled_weak(time_point_cast<duration_t>(when),
+                              make_action(what));
+  }
+
   /// Runs `what` asynchronously after the `delay`.
   /// @param delay Minimum amount of time that actor waits before invoking the
   ///              action. Due to scheduling delays, there will always be some
@@ -659,6 +686,21 @@ public:
     return run_delayed(duration_cast<timespan>(delay), make_action(what));
   }
 
+  /// Runs `what` asynchronously after the `delay` if the actor still exists.
+  /// The callback is going to hold a weak reference to the actor, i.e., does
+  /// not prevent the actor to become unreachable.
+  /// @param delay Minimum amount of time that actor waits before invoking the
+  ///              action. Due to scheduling delays, there will always be some
+  ///              additional wait time.
+  /// @param what The action to invoke after the delay.
+  /// @returns A @ref disposable that allows the actor to cancel the action.
+  template <class Rep, class Period, class F>
+  disposable
+  run_delayed_weak(std::chrono::duration<Rep, Period> delay, F what) {
+    using std::chrono::duration_cast;
+    return run_delayed_weak(duration_cast<timespan>(delay), make_action(what));
+  }
+
   // -- properties -------------------------------------------------------------
 
   /// Returns `true` if the actor has a behavior, awaits responses, or
@@ -667,7 +709,7 @@ public:
   bool alive() const noexcept {
     return !bhvr_stack_.empty() || !awaited_responses_.empty()
            || !multiplexed_responses_.empty() || !watched_disposables_.empty()
-           || !stream_sources_.empty();
+           || !stream_sources_.empty() || !stream_bridges_.empty();
   }
 
   /// Runs all pending actions.
@@ -744,7 +786,10 @@ private:
 
   disposable run_scheduled(timestamp when, action what);
   disposable run_scheduled(actor_clock::time_point when, action what);
+  disposable run_scheduled_weak(timestamp when, action what);
+  disposable run_scheduled_weak(actor_clock::time_point when, action what);
   disposable run_delayed(timespan delay, action what);
+  disposable run_delayed_weak(timespan delay, action what);
 
   // -- caf::flow bindings -----------------------------------------------------
 
@@ -784,6 +829,11 @@ private:
   /// message.
   std::vector<action> actions_;
 
+  /// Counter for scheduled_actor::delay to make sure
+  /// scheduled_actor::run_actions does not end up in a busy loop that might
+  /// starve other activities.
+  size_t delayed_actions_this_run_ = 0;
+
   /// Stores ongoing activities such as flows that block the actor from
   /// terminating.
   std::vector<disposable> watched_disposables_;
@@ -799,6 +849,12 @@ private:
   /// Maps the ID of incoming stream batches to local state that allows the
   /// actor to push received batches into the local flow.
   std::unordered_map<uint64_t, detail::stream_bridge_sub_ptr> stream_bridges_;
+
+  /// Special-purpose behavior for scheduled_actor::delay. When pushing an
+  /// action to the mailbox, we register this behavior as the response handler.
+  /// This is to make sure that actor does not terminate because it thinks it's
+  /// done before processing the delayed action.
+  behavior delay_bhvr_;
 };
 
 } // namespace caf

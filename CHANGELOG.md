@@ -11,6 +11,21 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   with JSON inputs directly. Actors can also pass around JSON values safely.
 - Futures can now convert to observable values for making it easier to process
   asynchronous results with data flows.
+- Add new `*_weak` variants of `scheduled_actor::run_{delayed, scheduled}`.
+  These functions add no reference count to their actor, allowing it to become
+  unreachable if other actors no longer reference it.
+- Typed actors that use a `typed_actor_pointer` can now access the
+  `run_{delayed,scheduled}` member functions.
+- Scheduled and delayed sends now return a disposable (#1362).
+- Typed response handles received support for converting them to observable or
+  single objects.
+- Typed actors that use the type-erased pointer-view type received access to the
+  new flow API functions (e.g., `make_observable`).
+- Not initializing the meta objects table now prints a diagnosis message before
+  aborting the program. Previously, the application would usually just crash due
+  to a `nullptr`-access inside some CAF function.
+- The class `expected` now implements the monadic member functions from C++23
+  `std::expected` as well as `value_or`.
 
 ### Fixed
 
@@ -19,6 +34,30 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   on the buffer that could cause indefinite hanging of an application.
 - Fused stages now properly forward errors during the initial subscription to
   their observer.
+- The `fan_out_request` request now properly deals with actor handles that
+  respond with `void` (#1369).
+- Fix subscription and event handling in flow buffer operator.
+- Fix undefined behavior in getter functions of the flow `mcast` operator.
+- Add checks to avoid potential UB when using `prefix_and_tail` or other
+  operators that use the `ucast` operator internally.
+- The `mcast` and `ucast` operators now stop calling `on_next` immediately when
+  disposed.
+- Actors no longer terminate despite having open streams (#1377).
+- Actors reading from external sources such as SPSC buffers via a local flow
+  could end up in a long-running read loop. To avoid potentially starving other
+  actors or activities, scheduled actors now limit the amount of actions that
+  may run in one iteration (#1364).
+- Destroying a consumer or producer resource before opening it lead to a stall
+  of the consumer / producer. The buffer now keeps track of whether `close` or
+  `abort` were called prior to consumers or producers attaching.
+
+### Deprecated
+
+- All member functions from `caf::expected` that have no equivalent in
+  `std::expected` are now deprecated. Further, `caf::expected<unit_t>` as well
+  as constructing from `unit_t` are deprecated as well. The reasoning behind
+  this decision is that `caf::expected` should eventually become an alias for
+  `std::expected<T, caf::error>`.
 
 ## [0.19.0-rc.1] - 2022-10-31
 
@@ -48,15 +87,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   heap-use-after-free if the actor terminates before the action runs. The
   destructor of the promise now checks for this case.
 - Accessing URI fields now always returns the normalized string.
-- The JSON parser no longer chokes when encountering `null` as last value before
-  the closing parenthesis.
-- The JSON reader now automatically widens integers to doubles as necessary.
 - Module options (e.g. for the `middleman`) now show up in `--long-help` output.
 - Fix undefined behavior in the Qt group chat example (#1336).
 - The `..._instance` convenience functions on the registry metric now properly
   support `double` metrics and histograms.
-- Parsing deeply nested JSON inputs no longer produces a stack overflow.
-  Instead, the parser rejects any JSON with too many nesting levels.
 - The spinlock-based work-stealing implementation had severe performance issues
   on Windows in some cases. We have switched to a regular, mutex-based approach
   to avoid performance degradations. The new implementation also uses the
@@ -101,6 +135,18 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   greedy and did not play nicely with ADL when using `std::variant` in the same
   code base. Since fixing `caf::variant` does not seem to be worth the time
   investment, we remove this type without a deprecation cycle.
+
+## [0.18.7] - 2023-02-08
+
+### Fixed
+
+- The JSON parser no longer chokes when encountering `null` as last value before
+  the closing parenthesis.
+- The JSON reader now automatically widens integers to doubles as necessary.
+- Parsing deeply nested JSON inputs no longer produces a stack overflow.
+  Instead, the parser rejects any JSON with too many nesting levels.
+- The `fan_out_request` request now properly deals with actor handles that
+  respond with `void` (#1369). Note: back-ported fix from 0.19.
 
 ## [0.18.6] - 2022-03-24
 
@@ -885,6 +931,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 [Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.0-rc.1...master
 [0.19.0-rc.1]: https://github.com/actor-framework/actor-framework/releases/0.19.0-rc.1
+[0.18.7]: https://github.com/actor-framework/actor-framework/releases/0.18.7
 [0.18.6]: https://github.com/actor-framework/actor-framework/releases/0.18.6
 [0.18.5]: https://github.com/actor-framework/actor-framework/releases/0.18.5
 [0.18.4]: https://github.com/actor-framework/actor-framework/releases/0.18.4

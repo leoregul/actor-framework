@@ -56,8 +56,7 @@ caf_add_component(
     async.read_result
     async.write_result
     exit_reason
-    flow.observable_state
-    flow.observer_state
+    flow.op.state
     intrusive.inbox_result
     intrusive.task_result
     invoke_message_result
@@ -280,25 +279,28 @@ caf_add_component(
     dynamic_spawn
     error
     expected
-    flow.buffer
-    flow.concat
     flow.concat_map
-    flow.defer
-    flow.empty
-    flow.fail
     flow.flat_map
     flow.for_each
     flow.generation
-    flow.interval
     flow.item_publisher
-    flow.merge
     flow.mixed
-    flow.never
     flow.observe_on
-    flow.prefix_and_tail
+    flow.op.buffer
+    flow.op.cell
+    flow.op.concat
+    flow.op.defer
+    flow.op.empty
+    flow.op.fail
+    flow.op.interval
+    flow.op.mcast
+    flow.op.merge
+    flow.op.never
+    flow.op.prefix_and_tail
+    flow.op.ucast
+    flow.op.zip_with
     flow.publish
     flow.single
-    flow.zip_with
     function_view
     handles
     hash.fnv
@@ -330,6 +332,7 @@ caf_add_component(
     message_builder
     message_id
     message_lifetime
+    messaging
     metaprogramming
     mixin.requester
     mixin.sender
@@ -344,6 +347,8 @@ caf_add_component(
     response_handle
     response_promise
     result
+    run_delayed
+    run_scheduled
     save_inspector
     scheduled_actor
     serial_reply
@@ -365,6 +370,7 @@ caf_add_component(
     thread_hook
     tracing_data
     type_id_list
+    typed_actor_view
     typed_behavior
     typed_message_view
     typed_response_promise
