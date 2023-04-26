@@ -5,6 +5,16 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix flow setup for servers that use `web_socket::with`. This bug caused
+  servers to immediately abort incoming connection (#1402).
+- Make sure that a protocol stack ships pending data before closing a socket.
+  This bug prevented clients from receiving error messages from servers if the
+  server shuts down immediately after writing the message.
+
+## [0.19.0] - 2023-04-17
+
 ### Added
 
 - The new classes `json_value`, `json_array` and `json_object` allow working
@@ -941,7 +951,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.0-rc.1...master
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.0...master
+[0.19.0]: https://github.com/actor-framework/actor-framework/releases/0.19.0
 [0.19.0-rc.1]: https://github.com/actor-framework/actor-framework/releases/0.19.0-rc.1
 [0.18.7]: https://github.com/actor-framework/actor-framework/releases/0.18.7
 [0.18.6]: https://github.com/actor-framework/actor-framework/releases/0.18.6
