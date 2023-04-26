@@ -539,6 +539,10 @@ bool json_reader::integer(T& x) {
                       "integer out of bounds");
         return false;
       }
+    } if (val.data.index() == detail::json::value::double_index) {
+      auto d = std::get<double>(val.data);
+      x = static_cast<T>(d);
+      return true;
     } else {
       emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
                     type_clash("json::integer", val));
