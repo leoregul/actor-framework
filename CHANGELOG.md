@@ -5,6 +5,25 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Changed
+
+- Install CAF tools to `${CMAKE_INSTALL_BINDIR}` to make packaging easier.
+- The OpenSSL module no longer hard-codes calls to `SSL_CTX_set_cipher_list` in
+  order to use the system settings by default. Users can provide a custom cipher
+  list by providing a value for the configuration option
+  `caf.openssl.cipher-list`. To restore the previous behavior, set this
+  parameter to `HIGH:!aNULL:!MD5` when running with a certificate and
+  `AECDH-AES256-SHA@SECLEVEL=0` otherwise (or without `@SECLEVEL=0` for older
+  versions of OpenSSL). Please note that these lists are *not* recommended as
+  safe defaults, which is why we are no longer setting these values.
+
+### Fixed
+
+- Add missing initialization code for the new caf-net module when using the
+  `CAF_MAIN` macro. This fixes the `WSANOTINITIALISED` error on Windows (#1409).
+
+## [0.19.1] - 2023-05-01
+
 ### Added
 
 - The class `json_value` can now hold unsigned 64-bit integer values. This
@@ -966,7 +985,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.0...master
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.1...master
+[0.19.1]: https://github.com/actor-framework/actor-framework/releases/0.19.1
 [0.19.0]: https://github.com/actor-framework/actor-framework/releases/0.19.0
 [0.19.0-rc.1]: https://github.com/actor-framework/actor-framework/releases/0.19.0-rc.1
 [0.18.7]: https://github.com/actor-framework/actor-framework/releases/0.18.7
