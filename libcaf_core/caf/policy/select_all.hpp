@@ -4,12 +4,6 @@
 
 #pragma once
 
-#include <cstddef>
-#include <functional>
-#include <limits>
-#include <memory>
-#include <vector>
-
 #include "caf/behavior.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/type_list.hpp"
@@ -19,6 +13,12 @@
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/message_id.hpp"
+
+#include <cstddef>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <vector>
 
 namespace caf::detail {
 
@@ -140,7 +140,7 @@ public:
   template <class Fun>
   using type_checker
     = detail::type_checker<response_type,
-                           detail::select_all_helper_t<detail::decay_t<Fun>>>;
+                           detail::select_all_helper_t<std::decay_t<Fun>>>;
 
   explicit select_all(message_id_list ids, disposable pending_timeouts)
     : ids_(std::move(ids)), pending_timeouts_(std::move(pending_timeouts)) {
@@ -171,7 +171,7 @@ public:
   template <class Self, class F, class G>
   void receive(Self* self, F&& f, G&& g) {
     CAF_LOG_TRACE(CAF_ARG(ids_));
-    using helper_type = detail::select_all_helper_t<detail::decay_t<F>>;
+    using helper_type = detail::select_all_helper_t<std::decay_t<F>>;
     helper_type helper{ids_.size(), pending_timeouts_, std::forward<F>(f)};
     auto error_handler = [&](error& err) mutable {
       if (*helper.pending > 0) {
@@ -200,8 +200,8 @@ private:
   template <class F, class OnError>
   behavior make_behavior(F&& f, OnError&& g) {
     using namespace detail;
-    using helper_type = select_all_helper_t<decay_t<F>>;
-    helper_type helper{ids_.size(), pending_timeouts_, std::move(f)};
+    using helper_type = select_all_helper_t<std::decay_t<F>>;
+    helper_type helper{ids_.size(), pending_timeouts_, std::forward<F>(f)};
     auto pending = helper.pending;
     auto error_handler = [pending{std::move(pending)},
                           timeouts{pending_timeouts_},

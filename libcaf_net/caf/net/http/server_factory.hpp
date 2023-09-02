@@ -4,13 +4,6 @@
 
 #pragma once
 
-#include "caf/async/blocking_producer.hpp"
-#include "caf/async/execution_context.hpp"
-#include "caf/defaults.hpp"
-#include "caf/detail/accept_handler.hpp"
-#include "caf/detail/connection_factory.hpp"
-#include "caf/detail/net_export.hpp"
-#include "caf/fwd.hpp"
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/generic_config.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
@@ -23,6 +16,14 @@
 #include "caf/net/ssl/transport.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
+
+#include "caf/async/blocking_producer.hpp"
+#include "caf/async/execution_context.hpp"
+#include "caf/defaults.hpp"
+#include "caf/detail/accept_handler.hpp"
+#include "caf/detail/connection_factory.hpp"
+#include "caf/detail/net_export.hpp"
+#include "caf/fwd.hpp"
 #include "caf/none.hpp"
 
 #include <cstdint>
@@ -82,10 +83,9 @@ public:
                                connection_handle conn) override {
     auto app = net::http::router::make(routes_);
     auto serv = net::http::server::make(std::move(app));
-    auto fd = conn.fd();
     auto transport = Transport::make(std::move(conn), std::move(serv));
     transport->max_consecutive_reads(max_consecutive_reads_);
-    transport->active_policy().accept(fd);
+    transport->active_policy().accept();
     auto res = net::socket_manager::make(mpx, std::move(transport));
     mpx->watch(res->as_disposable());
     return res;

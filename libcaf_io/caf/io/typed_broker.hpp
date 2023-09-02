@@ -4,29 +4,27 @@
 
 #pragma once
 
-#include <map>
-#include <type_traits>
-#include <vector>
-
-#include "caf/config.hpp"
-#include "caf/extend.hpp"
-#include "caf/local_actor.hpp"
-#include "caf/make_counted.hpp"
-#include "caf/none.hpp"
-#include "caf/typed_actor.hpp"
-
-#include "caf/actor_registry.hpp"
-#include "caf/detail/scope_guard.hpp"
-#include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/logger.hpp"
-
-#include "caf/mixin/behavior_changer.hpp"
-#include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
-
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/middleman.hpp"
+
+#include "caf/actor_registry.hpp"
+#include "caf/config.hpp"
+#include "caf/detail/scope_guard.hpp"
+#include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/extend.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/logger.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/mixin/behavior_changer.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
+#include "caf/none.hpp"
+#include "caf/typed_actor.hpp"
+
+#include <map>
+#include <type_traits>
+#include <vector>
 
 namespace caf {
 
@@ -98,8 +96,7 @@ public:
   }
 
   template <class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
-  fork(F fun, connection_handle hdl, Ts&&... xs) {
+  infer_handle_from_fun_t<F> fork(F fun, connection_handle hdl, Ts&&... xs) {
     CAF_ASSERT(this->context() != nullptr);
     auto sptr = this->take(hdl);
     CAF_ASSERT(sptr->hdl() == hdl);
@@ -125,13 +122,13 @@ public:
 
   expected<connection_handle> add_tcp_scribe(const std::string& host,
                                              uint16_t port) {
-    static_assert(std::is_convertible<actor_hdl, connection_handler>::value,
+    static_assert(std::is_convertible_v<actor_hdl, connection_handler>,
                   "Cannot add scribe: broker misses required handlers");
     return super::add_tcp_scribe(host, port);
   }
 
   connection_handle add_tcp_scribe(network::native_socket fd) {
-    static_assert(std::is_convertible<actor_hdl, connection_handler>::value,
+    static_assert(std::is_convertible_v<actor_hdl, connection_handler>,
                   "Cannot add scribe: broker misses required handlers");
     return super::add_tcp_scribe(fd);
   }
@@ -139,13 +136,13 @@ public:
   expected<std::pair<accept_handle, uint16_t>>
   add_tcp_doorman(uint16_t port = 0, const char* in = nullptr,
                   bool reuse_addr = false) {
-    static_assert(std::is_convertible<actor_hdl, accept_handler>::value,
+    static_assert(std::is_convertible_v<actor_hdl, accept_handler>,
                   "Cannot add doorman: broker misses required handlers");
     return super::add_tcp_doorman(port, in, reuse_addr);
   }
 
   expected<accept_handle> add_tcp_doorman(network::native_socket fd) {
-    static_assert(std::is_convertible<actor_hdl, accept_handler>::value,
+    static_assert(std::is_convertible_v<actor_hdl, accept_handler>,
                   "Cannot add doorman: broker misses required handlers");
     return super::add_tcp_doorman(fd);
   }

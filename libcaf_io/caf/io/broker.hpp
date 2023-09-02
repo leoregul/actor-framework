@@ -4,21 +4,22 @@
 
 #pragma once
 
-#include <map>
-#include <vector>
-
-#include "caf/detail/io_export.hpp"
-#include "caf/extend.hpp"
-#include "caf/fwd.hpp"
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/datagram_servant.hpp"
 #include "caf/io/doorman.hpp"
 #include "caf/io/scribe.hpp"
+
+#include "caf/detail/io_export.hpp"
+#include "caf/extend.hpp"
+#include "caf/fwd.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/stateful_actor.hpp"
+
+#include <map>
+#include <vector>
 
 namespace caf {
 
@@ -48,8 +49,7 @@ public:
   using signatures = none_t;
 
   template <class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
-  fork(F fun, connection_handle hdl, Ts&&... xs) {
+  infer_handle_from_fun_t<F> fork(F fun, connection_handle hdl, Ts&&... xs) {
     CAF_ASSERT(context() != nullptr);
     auto sptr = this->take(hdl);
     CAF_ASSERT(sptr->hdl() == hdl);

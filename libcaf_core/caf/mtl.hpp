@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/detail/mtl_util.hpp"
 #include "caf/typed_actor.hpp"
+
+#include <type_traits>
 
 namespace caf {
 
@@ -21,9 +21,9 @@ class event_based_mtl {
 public:
   // -- sanity checks ----------------------------------------------------------
 
-  static_assert(std::is_nothrow_copy_assignable<Adapter>::value);
+  static_assert(std::is_nothrow_copy_assignable_v<Adapter>);
 
-  static_assert(std::is_nothrow_move_assignable<Adapter>::value);
+  static_assert(std::is_nothrow_move_assignable_v<Adapter>);
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -80,7 +80,7 @@ public:
   bool try_request(const typed_actor<Fs...>& dst, Timeout timeout,
                    OnResult on_result, OnError on_error) {
     using on_error_result = decltype(on_error(std::declval<error&>()));
-    static_assert(std::is_same<void, on_error_result>::value);
+    static_assert(std::is_same_v<void, on_error_result>);
     auto dst_hdl = actor_cast<actor>(dst);
     return (detail::mtl_util<Fs>::request(self_, dst_hdl, timeout, adapter_,
                                           *reader_, on_result, on_error)
@@ -102,7 +102,7 @@ private:
 ///               @ref deserializer directly or that provides a compatible API.
 template <class Self, class Adapter, class Reader>
 auto make_mtl(Self* self, Adapter adapter, Reader* reader) {
-  if constexpr (std::is_base_of<non_blocking_actor_base, Self>::value) {
+  if constexpr (std::is_base_of_v<non_blocking_actor_base, Self>) {
     return event_based_mtl{self, adapter, reader};
   } else {
     static_assert(detail::always_false_v<Self>,

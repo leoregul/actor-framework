@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include "caf/config_value.hpp"
-#include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/http/method.hpp"
 #include "caf/net/http/status.hpp"
+
+#include "caf/config_value.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/uri.hpp"
 
@@ -120,7 +121,7 @@ public:
       if (auto res = caf::get_as<T>(val))
         return std::move(*res);
     }
-    return {};
+    return std::nullopt;
   }
 
   /// Executes the provided callable `f` for each field in the request header.

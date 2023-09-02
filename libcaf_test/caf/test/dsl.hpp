@@ -4,14 +4,16 @@
 
 #pragma once
 
-#include <type_traits>
+#include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/init_global_meta_objects.hpp"
-#include "caf/test/unit_test.hpp"
+
+#include <tuple>
+#include <type_traits>
 
 CAF_PUSH_WARNINGS
 
@@ -29,19 +31,19 @@ constexpr bool operator==(const wildcard&, const wildcard&) {
 
 template <size_t I, class T>
 bool cmp_one(const caf::message& x, const T& y) {
-  if (std::is_same<T, wildcard>::value)
+  if (std::is_same_v<T, wildcard>)
     return true;
   return x.match_element<T>(I) && x.get_as<T>(I) == y;
 }
 
 template <size_t I, class... Ts>
-typename std::enable_if<(I == sizeof...(Ts)), bool>::type
+std::enable_if_t<(I == sizeof...(Ts)), bool>
 msg_cmp_rec(const caf::message&, const std::tuple<Ts...>&) {
   return true;
 }
 
 template <size_t I, class... Ts>
-typename std::enable_if<(I < sizeof...(Ts)), bool>::type
+std::enable_if_t<(I < sizeof...(Ts)), bool>
 msg_cmp_rec(const caf::message& x, const std::tuple<Ts...>& ys) {
   return cmp_one<I>(x, std::get<I>(ys)) && msg_cmp_rec<I + 1>(x, ys);
 }
@@ -74,7 +76,7 @@ struct has_outer_type {
   static auto sfinae(...) -> std::false_type;
 
   using type = decltype(sfinae<T>(nullptr));
-  static constexpr bool value = !std::is_same<type, std::false_type>::value;
+  static constexpr bool value = !std::is_same_v<type, std::false_type>;
 };
 
 // enables ADL in `with_content`
@@ -163,8 +165,7 @@ public:
     return *this;
   }
 
-  template <class T,
-            class E = caf::detail::enable_if_t<!std::is_pointer<T>::value>>
+  template <class T, class E = std::enable_if_t<!std::is_pointer_v<T>>>
   caf_handle& operator=(const T& x) {
     set(x);
     return *this;
@@ -700,7 +701,6 @@ public:
                              caf::test::engine::argv()))
       CAF_FAIL("failed to parse config: " << to_string(err));
     cfg.set("caf.scheduler.policy", "testing");
-    cfg.set("caf.logger.inline-output", true);
     if (cfg.custom_options().has_category("caf.middleman")) {
       cfg.set("caf.middleman.network-backend", "testing");
       cfg.set("caf.middleman.manual-multiplexing", true);
@@ -828,19 +828,19 @@ public:
 
   /// Call `run()` when the next scheduled actor becomes ready.
   void run_after_next_ready_event() {
-    sched.after_next_enqueue([=] { run(); });
+    sched.after_next_enqueue([this] { run(); });
   }
 
   /// Call `run_until(predicate)` when the next scheduled actor becomes ready.
   template <class BoolPredicate>
   void run_until_after_next_ready_event(BoolPredicate predicate) {
-    sched.after_next_enqueue([=] { run_until(predicate); });
+    sched.after_next_enqueue([this, predicate] { run_until(predicate); });
   }
 
   /// Sends a request to `hdl`, then calls `run()`, and finally fetches and
   /// returns the result.
   template <class T, class... Ts, class Handle, class... Us>
-  typename std::conditional<sizeof...(Ts) == 0, T, std::tuple<T, Ts...>>::type
+  std::conditional_t<sizeof...(Ts) == 0, T, std::tuple<T, Ts...>>
   request(Handle hdl, Us... args) {
     auto res_hdl = self->request(hdl, caf::infinite, std::move(args)...);
     run();

@@ -6,13 +6,13 @@
 // DSL is supposed to clean up all defines made in this header via
 // `include "caf/detail/parser/fsm_undef.hpp"` at the end.
 
-#include <type_traits>
-
 #include "caf/detail/pp.hpp"
+
+#include <type_traits>
 
 #define CAF_FSM_EVAL_ACTION(action)                                            \
   auto action_impl = [&]() -> decltype(auto) { return action; };               \
-  if constexpr (std::is_same<pec, decltype(action_impl())>::value) {           \
+  if constexpr (std::is_same_v<pec, decltype(action_impl())>) {                \
     if (auto code = action_impl(); code != pec::success) {                     \
       ps.code = code;                                                          \
       return;                                                                  \

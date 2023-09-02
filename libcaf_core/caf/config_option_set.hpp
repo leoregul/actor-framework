@@ -4,18 +4,18 @@
 
 #pragma once
 
+#include "caf/config_option.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
+#include "caf/make_config_option.hpp"
+#include "caf/pec.hpp"
+
 #include <map>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
-
-#include "caf/config_option.hpp"
-#include "caf/detail/core_export.hpp"
-#include "caf/fwd.hpp"
-#include "caf/make_config_option.hpp"
-#include "caf/pec.hpp"
 
 namespace caf {
 
@@ -158,7 +158,7 @@ public:
   config_option_set& add(config_option opt);
 
   /// Generates human-readable help text for all options.
-  std::string help_text(bool global_only = true) const;
+  std::string help_text(bool hide_caf_options = true) const;
 
   /// Drops all options.
   void clear() {

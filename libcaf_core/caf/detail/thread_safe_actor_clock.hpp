@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <memory>
-#include <thread>
-#include <vector>
-
 #include "caf/action.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/ringbuffer.hpp"
+#include "caf/detail/sync_ring_buffer.hpp"
 #include "caf/fwd.hpp"
+
+#include <memory>
+#include <thread>
+#include <vector>
 
 namespace caf::detail {
 
@@ -58,7 +58,7 @@ private:
   // -- member variables -------------------------------------------------------
 
   /// Communication to the dispatcher thread.
-  detail::ringbuffer<schedule_entry_ptr, buffer_size> queue_;
+  detail::sync_ring_buffer<schedule_entry_ptr, buffer_size> queue_;
 
   /// Handle to the dispatcher thread.
   std::thread dispatcher_;

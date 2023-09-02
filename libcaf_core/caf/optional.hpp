@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+#include "caf/fwd.hpp"
+#include "caf/none.hpp"
+#include "caf/unit.hpp"
+
 #include <memory>
 #include <new>
 #include <utility>
-
-#include "caf/config.hpp"
-#include "caf/none.hpp"
-#include "caf/unit.hpp"
 
 CAF_PUSH_DEPRECATED_WARNING
 
@@ -20,7 +21,7 @@ namespace caf {
 template <class T>
 class optional {
 public:
-  /// Typdef for `T`.
+  /// Type alias for `T`.
   using type = T;
 
   using value_type = T;
@@ -31,9 +32,7 @@ public:
   }
 
   /// Creates an valid instance from `value`.
-  template <class U,
-            class E
-            = typename std::enable_if<std::is_convertible<U, T>::value>::type>
+  template <class U, class E = std::enable_if_t<std::is_convertible_v<U, T>>>
   optional(U x) : m_valid(false) {
     cr(std::move(x));
   }
@@ -44,8 +43,7 @@ public:
     }
   }
 
-  optional(optional&& other) noexcept(
-    std::is_nothrow_move_constructible<T>::value)
+  optional(optional&& other) noexcept(std::is_nothrow_move_constructible_v<T>)
     : m_valid(false) {
     if (other.m_valid) {
       cr(std::move(other.m_value));
@@ -69,8 +67,7 @@ public:
   }
 
   optional& operator=(optional&& other) noexcept(
-    std::is_nothrow_destructible<T>::value&&
-      std::is_nothrow_move_assignable<T>::value) {
+    std::is_nothrow_destructible_v<T>&& std::is_nothrow_move_assignable_v<T>) {
     if (m_valid) {
       if (other.m_valid)
         m_value = std::move(other.m_value);

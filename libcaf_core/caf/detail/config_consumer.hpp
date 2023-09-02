@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <string>
-
 #include "caf/config_option_set.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/settings.hpp"
+
+#include <string>
 
 namespace caf::detail {
 
@@ -140,7 +140,7 @@ public:
 
   template <class T>
   void value(T&& x) {
-    result = config_value{std::forward<T>(x)};
+    result = std::forward<T>(x);
   }
 
   config_list_consumer begin_list();

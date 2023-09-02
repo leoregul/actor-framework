@@ -58,7 +58,6 @@ caf_add_component(
     exit_reason
     flow.op.state
     intrusive.inbox_result
-    intrusive.task_result
     invoke_message_result
     message_priority
     pec
@@ -67,158 +66,173 @@ caf_add_component(
   HEADERS
     ${CAF_CORE_HEADERS}
   SOURCES
-    src/abstract_actor.cpp
-    src/abstract_channel.cpp
-    src/abstract_group.cpp
-    src/action.cpp
-    src/actor.cpp
-    src/actor_addr.cpp
-    src/actor_clock.cpp
-    src/actor_companion.cpp
-    src/actor_config.cpp
-    src/actor_control_block.cpp
-    src/actor_ostream.cpp
-    src/actor_pool.cpp
-    src/actor_profiler.cpp
-    src/actor_proxy.cpp
-    src/actor_registry.cpp
-    src/actor_system.cpp
-    src/actor_system_config.cpp
-    src/async/batch.cpp
-    src/async/consumer.cpp
-    src/async/execution_context.cpp
-    src/async/producer.cpp
-    src/attachable.cpp
-    src/behavior.cpp
-    src/binary_deserializer.cpp
-    src/binary_serializer.cpp
-    src/blocking_actor.cpp
-    src/config_option.cpp
-    src/config_option_adder.cpp
-    src/config_option_set.cpp
-    src/config_value.cpp
-    src/config_value_reader.cpp
-    src/config_value_writer.cpp
-    src/decorator/sequencer.cpp
-    src/default_attachable.cpp
-    src/deserializer.cpp
-    src/detail/abstract_worker.cpp
-    src/detail/abstract_worker_hub.cpp
-    src/detail/atomic_ref_counted.cpp
-    src/detail/base64.cpp
-    src/detail/behavior_impl.cpp
-    src/detail/behavior_stack.cpp
-    src/detail/blocking_behavior.cpp
-    src/detail/config_consumer.cpp
-    src/detail/get_mac_addresses.cpp
-    src/detail/get_process_id.cpp
-    src/detail/get_root_uuid.cpp
-    src/detail/glob_match.cpp
-    src/detail/group_tunnel.cpp
-    src/detail/invoke_result_visitor.cpp
-    src/detail/json.cpp
-    src/detail/latch.cpp
-    src/detail/local_group_module.cpp
-    src/detail/message_builder_element.cpp
-    src/detail/message_data.cpp
-    src/detail/meta_object.cpp
-    src/detail/monotonic_buffer_resource.cpp
-    src/detail/parse.cpp
-    src/detail/parser/chars.cpp
-    src/detail/plain_ref_counted.cpp
-    src/detail/pretty_type_name.cpp
-    src/detail/print.cpp
-    src/detail/private_thread.cpp
-    src/detail/private_thread_pool.cpp
-    src/detail/ripemd_160.cpp
-    src/detail/set_thread_name.cpp
-    src/detail/stream_bridge.cpp
-    src/detail/stringification_inspector.cpp
-    src/detail/sync_request_bouncer.cpp
-    src/detail/test_actor_clock.cpp
-    src/detail/thread_safe_actor_clock.cpp
-    src/detail/type_id_list_builder.cpp
-    src/disposable.cpp
-    src/error.cpp
-    src/event_based_actor.cpp
-    src/execution_unit.cpp
-    src/flow/coordinated.cpp
-    src/flow/coordinator.cpp
-    src/flow/observable_builder.cpp
-    src/flow/op/interval.cpp
-    src/flow/scoped_coordinator.cpp
-    src/flow/subscription.cpp
-    src/forwarding_actor_proxy.cpp
-    src/group.cpp
-    src/group_manager.cpp
-    src/group_module.cpp
-    src/hash/sha1.cpp
-    src/init_global_meta_objects.cpp
-    src/ipv4_address.cpp
-    src/ipv4_endpoint.cpp
-    src/ipv4_subnet.cpp
-    src/ipv6_address.cpp
-    src/ipv6_endpoint.cpp
-    src/ipv6_subnet.cpp
-    src/json_array.cpp
-    src/json_builder.cpp
-    src/json_object.cpp
-    src/json_reader.cpp
-    src/json_value.cpp
-    src/json_writer.cpp
-    src/load_inspector.cpp
-    src/local_actor.cpp
-    src/logger.cpp
-    src/mailbox_element.cpp
-    src/make_config_option.cpp
-    src/message.cpp
-    src/message_builder.cpp
-    src/message_handler.cpp
-    src/monitorable_actor.cpp
-    src/node_id.cpp
-    src/policy/unprofiled.cpp
-    src/policy/work_sharing.cpp
-    src/policy/work_stealing.cpp
-    src/proxy_registry.cpp
-    src/raise_error.cpp
-    src/ref_counted.cpp
-    src/replies_to.cpp
-    src/response_promise.cpp
-    src/resumable.cpp
-    src/save_inspector.cpp
-    src/scheduled_actor.cpp
-    src/scheduler/abstract_coordinator.cpp
-    src/scheduler/test_coordinator.cpp
-    src/scoped_actor.cpp
-    src/scoped_execution_unit.cpp
-    src/serializer.cpp
-    src/settings.cpp
-    src/skip.cpp
-    src/stream.cpp
-    src/string_algorithms.cpp
-    src/string_view.cpp
-    src/telemetry/collector/prometheus.cpp
-    src/telemetry/importer/process.cpp
-    src/telemetry/label.cpp
-    src/telemetry/label_view.cpp
-    src/telemetry/metric.cpp
-    src/telemetry/metric_family.cpp
-    src/telemetry/metric_registry.cpp
-    src/term.cpp
-    src/thread_hook.cpp
-    src/timestamp.cpp
-    src/tracing_data.cpp
-    src/tracing_data_factory.cpp
-    src/type_id.cpp
-    src/type_id_list.cpp
-    src/uri.cpp
-    src/uri_builder.cpp
-    src/uuid.cpp
-  TEST_SOURCES
-    test/core-test.cpp
-    test/nasty.cpp
-  TEST_SUITES
-    action
+    caf/abstract_actor.cpp
+    caf/abstract_channel.cpp
+    caf/abstract_group.cpp
+    caf/abstract_mailbox.cpp
+    caf/action.cpp
+    caf/action.test.cpp
+    caf/actor.cpp
+    caf/actor_addr.cpp
+    caf/actor_clock.cpp
+    caf/actor_companion.cpp
+    caf/actor_config.cpp
+    caf/actor_control_block.cpp
+    caf/actor_ostream.cpp
+    caf/actor_pool.cpp
+    caf/actor_profiler.cpp
+    caf/actor_proxy.cpp
+    caf/actor_registry.cpp
+    caf/actor_system.cpp
+    caf/actor_system_config.cpp
+    caf/async/batch.cpp
+    caf/async/consumer.cpp
+    caf/async/execution_context.cpp
+    caf/async/producer.cpp
+    caf/attachable.cpp
+    caf/behavior.cpp
+    caf/binary_deserializer.cpp
+    caf/binary_serializer.cpp
+    caf/blocking_actor.cpp
+    caf/chrono.cpp
+    caf/config_option.cpp
+    caf/config_option_adder.cpp
+    caf/config_option_set.cpp
+    caf/config_value.cpp
+    caf/config_value_reader.cpp
+    caf/config_value_writer.cpp
+    caf/decorator/sequencer.cpp
+    caf/default_attachable.cpp
+    caf/deserializer.cpp
+    caf/detail/abstract_worker.cpp
+    caf/detail/abstract_worker_hub.cpp
+    caf/detail/atomic_ref_counted.cpp
+    caf/detail/base64.cpp
+    caf/detail/behavior_impl.cpp
+    caf/detail/behavior_stack.cpp
+    caf/detail/blocking_behavior.cpp
+    caf/detail/config_consumer.cpp
+    caf/detail/default_mailbox.cpp
+    caf/detail/default_mailbox.test.cpp
+    caf/detail/get_process_id.cpp
+    caf/detail/glob_match.cpp
+    caf/detail/group_tunnel.cpp
+    caf/detail/invoke_result_visitor.cpp
+    caf/detail/json.cpp
+    caf/detail/latch.cpp
+    caf/detail/local_group_module.cpp
+    caf/detail/mailbox_factory.cpp
+    caf/detail/mailbox_factory.test.cpp
+    caf/detail/message_builder_element.cpp
+    caf/detail/message_data.cpp
+    caf/detail/meta_object.cpp
+    caf/detail/monotonic_buffer_resource.cpp
+    caf/detail/parse.cpp
+    caf/detail/parser/chars.cpp
+    caf/detail/plain_ref_counted.cpp
+    caf/detail/pretty_type_name.cpp
+    caf/detail/print.cpp
+    caf/detail/private_thread.cpp
+    caf/detail/private_thread_pool.cpp
+    caf/detail/rfc3629.cpp
+    caf/detail/rfc3629.test.cpp
+    caf/detail/ring_buffer.test.cpp
+    caf/detail/set_thread_name.cpp
+    caf/detail/stream_bridge.cpp
+    caf/detail/stringification_inspector.cpp
+    caf/detail/sync_request_bouncer.cpp
+    caf/detail/sync_ring_buffer.test.cpp
+    caf/detail/test_actor_clock.cpp
+    caf/detail/thread_safe_actor_clock.cpp
+    caf/detail/type_id_list_builder.cpp
+    caf/disposable.cpp
+    caf/error.cpp
+    caf/event_based_actor.cpp
+    caf/execution_unit.cpp
+    caf/flow/coordinated.cpp
+    caf/flow/coordinator.cpp
+    caf/flow/observable.test.cpp
+    caf/flow/observable_builder.cpp
+    caf/flow/op/interval.cpp
+    caf/flow/scoped_coordinator.cpp
+    caf/flow/step/ignore_elements.test.cpp
+    caf/flow/step/skip_last.test.cpp
+    caf/flow/step/take_last.test.cpp
+    caf/flow/subscription.cpp
+    caf/forwarding_actor_proxy.cpp
+    caf/group.cpp
+    caf/group_manager.cpp
+    caf/group_module.cpp
+    caf/hash/fnv.test.cpp
+    caf/hash/sha1.cpp
+    caf/init_global_meta_objects.cpp
+    caf/intrusive/lifo_inbox.test.cpp
+    caf/intrusive/linked_list.test.cpp
+    caf/intrusive/stack.test.cpp
+    caf/ipv4_address.cpp
+    caf/ipv4_endpoint.cpp
+    caf/ipv4_subnet.cpp
+    caf/ipv6_address.cpp
+    caf/ipv6_endpoint.cpp
+    caf/ipv6_subnet.cpp
+    caf/json_array.cpp
+    caf/json_builder.cpp
+    caf/json_object.cpp
+    caf/json_reader.cpp
+    caf/json_value.cpp
+    caf/json_writer.cpp
+    caf/load_inspector.cpp
+    caf/local_actor.cpp
+    caf/logger.cpp
+    caf/mailbox_element.cpp
+    caf/make_config_option.cpp
+    caf/message.cpp
+    caf/message_builder.cpp
+    caf/message_handler.cpp
+    caf/monitorable_actor.cpp
+    caf/node_id.cpp
+    caf/policy/unprofiled.cpp
+    caf/policy/work_sharing.cpp
+    caf/policy/work_stealing.cpp
+    caf/proxy_registry.cpp
+    caf/raise_error.cpp
+    caf/ref_counted.cpp
+    caf/replies_to.cpp
+    caf/response_promise.cpp
+    caf/resumable.cpp
+    caf/save_inspector.cpp
+    caf/scheduled_actor.cpp
+    caf/scheduler/abstract_coordinator.cpp
+    caf/scheduler/test_coordinator.cpp
+    caf/scoped_actor.cpp
+    caf/scoped_execution_unit.cpp
+    caf/serializer.cpp
+    caf/settings.cpp
+    caf/skip.cpp
+    caf/stream.cpp
+    caf/string_algorithms.cpp
+    caf/string_view.cpp
+    caf/telemetry/collector/prometheus.cpp
+    caf/telemetry/importer/process.cpp
+    caf/telemetry/label.cpp
+    caf/telemetry/label_view.cpp
+    caf/telemetry/metric.cpp
+    caf/telemetry/metric_family.cpp
+    caf/telemetry/metric_registry.cpp
+    caf/term.cpp
+    caf/thread_hook.cpp
+    caf/timestamp.cpp
+    caf/tracing_data.cpp
+    caf/tracing_data_factory.cpp
+    caf/type_id.cpp
+    caf/type_id_list.cpp
+    caf/uri.cpp
+    caf/uri_builder.cpp
+    caf/uuid.cpp
+  LEGACY_TEST_SOURCES
+    tests/legacy/core-test.cpp
+    tests/legacy/nasty.cpp
+  LEGACY_TEST_SUITES
     actor_clock
     actor_factory
     actor_lifetime
@@ -232,11 +246,13 @@ caf_add_component(
     async.consumer_adapter
     async.producer_adapter
     async.promise
+    async.publisher
     async.spsc_buffer
     behavior
     binary_deserializer
     binary_serializer
     blocking_actor
+    chrono
     config_option
     config_option_set
     config_value
@@ -246,12 +262,12 @@ caf_add_component(
     constructor_attach
     cow_string
     cow_tuple
-    decorator.sequencer
     deep_to_string
     detached_actors
     detail.base64
     detail.bounds_checker
     detail.config_consumer
+    detail.format
     detail.group_tunnel
     detail.ieee_754
     detail.json
@@ -270,8 +286,6 @@ caf_add_component(
     detail.parser.read_timespan
     detail.parser.read_unsigned_integer
     detail.private_thread_pool
-    detail.ringbuffer
-    detail.ripemd_160
     detail.type_id_list_builder
     detail.unique_function
     dictionary
@@ -283,8 +297,8 @@ caf_add_component(
     flow.flat_map
     flow.for_each
     flow.generation
-    flow.item_publisher
     flow.mixed
+    flow.multicaster
     flow.observe_on
     flow.op.buffer
     flow.op.cell
@@ -303,15 +317,7 @@ caf_add_component(
     flow.single
     function_view
     handles
-    hash.fnv
     hash.sha1
-    intrusive.drr_cached_queue
-    intrusive.drr_queue
-    intrusive.fifo_inbox
-    intrusive.lifo_inbox
-    intrusive.task_queue
-    intrusive.wdrr_dynamic_multiplexed_queue
-    intrusive.wdrr_fixed_multiplexed_queue
     intrusive_ptr
     ipv4_address
     ipv4_endpoint
@@ -340,7 +346,6 @@ caf_add_component(
     node_id
     optional
     or_else
-    policy.categorized
     policy.select_all
     policy.select_any
     request_timeout
@@ -381,6 +386,10 @@ caf_add_component(
     uri
     uuid)
 
+if(NOT CAF_USE_STD_FORMAT)
+  target_sources(libcaf_core_obj PRIVATE caf/detail/format.cpp)
+endif()
+
 if(CAF_ENABLE_TESTING AND CAF_ENABLE_EXCEPTIONS)
-  caf_add_test_suites(caf-core-test custom_exception_handler)
+  caf_add_legacy_test_suites(caf-core-legacy-test custom_exception_handler)
 endif()

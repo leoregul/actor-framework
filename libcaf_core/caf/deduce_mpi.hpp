@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "caf/detail/implicit_conversions.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
+
+#include <type_traits>
 
 namespace caf::detail {
 
@@ -42,7 +42,7 @@ struct dmi<typed_response_promise<Out...>(In...)> {
 
 // -- dmfou = deduce_mpi_function_object_unboxing
 
-template <class T, bool isClass = std::is_class<T>::value>
+template <class T, bool isClass = std::is_class_v<T>>
 struct dmfou;
 
 // case #1a: const member function pointer

@@ -4,17 +4,17 @@
 
 #pragma once
 
-#include <algorithm>
-#include <initializer_list>
-#include <memory>
-#include <mutex>
-
 #include "caf/span.hpp"
 #include "caf/telemetry/label.hpp"
 #include "caf/telemetry/label_view.hpp"
 #include "caf/telemetry/metric.hpp"
 #include "caf/telemetry/metric_family.hpp"
 #include "caf/telemetry/metric_impl.hpp"
+
+#include <algorithm>
+#include <initializer_list>
+#include <memory>
+#include <mutex>
 
 namespace caf::telemetry {
 
@@ -64,7 +64,7 @@ public:
       std::vector<label> cpy{labels.begin(), labels.end()};
       std::sort(cpy.begin(), cpy.end());
       std::unique_ptr<impl_type> ptr;
-      if constexpr (std::is_same<extra_setting_type, unit_t>::value)
+      if constexpr (std::is_same_v<extra_setting_type, unit_t>)
         ptr.reset(new impl_type(std::move(cpy)));
       else
         ptr.reset(new impl_type(std::move(cpy), config_, extra_setting_));

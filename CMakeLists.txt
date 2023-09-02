@@ -6,6 +6,7 @@ project(CAF CXX)
 include(CMakeDependentOption)
 include(CMakePackageConfigHelpers)
 include(CheckCXXSourceCompiles)
+include(CheckCXXSourceRuns)
 include(GNUInstallDirs)
 include(GenerateExportHeader)
 
@@ -108,16 +109,16 @@ elseif(MSVC)
   target_compile_options(caf_internal INTERFACE /EHsc)
 endif()
 
-# -- unit testing setup / caf_add_test_suites function  ------------------------
+# -- unit testing setup / caf_add_legacy_test_suites function  ------------------------
 
 if(CAF_ENABLE_TESTING)
   enable_testing()
-  function(caf_add_test_suites target)
+  function(caf_add_legacy_test_suites target)
     foreach(suiteName ${ARGN})
       if(NOT ${suiteName} IN_LIST CAF_EXCLUDE_TESTS)
         string(REPLACE "." "/" suitePath ${suiteName})
         target_sources(${target} PRIVATE
-          "${CMAKE_CURRENT_SOURCE_DIR}/test/${suitePath}.cpp")
+          "${CMAKE_CURRENT_SOURCE_DIR}/tests/legacy/${suitePath}.cpp")
         add_test(NAME ${suiteName}
                  COMMAND ${target} -r300 -n -v5 -s "^${suiteName}$")
       endif()
@@ -158,6 +159,24 @@ if(NOT CMAKE_CROSSCOMPILING)
   endif()
 endif()
 
+# -- check whether we can use std::format --------------------------------------
+
+if(NOT DEFINED CAF_USE_STD_FORMAT)
+  set(CAF_USE_STD_FORMAT OFF CACHE BOOL "Enable std::format support" FORCE)
+  if(NOT CMAKE_CROSSCOMPILING)
+    set(snippet "#include <format>
+                 #include <iostream>
+                 int main() { std::cout << std::format(\"{}\", \"ok\"); }")
+    check_cxx_source_runs("${snippet}" snippet_output)
+    if("${snippet_output}" STREQUAL "ok")
+      message(STATUS "Enable std::format support")
+      set(CAF_USE_STD_FORMAT ON CACHE BOOL "Enable std::format support" FORCE)
+    else()
+      message(STATUS "Disable std::format support: NOT available")
+    endif()
+  endif()
+endif()
+
 # -- export internal target (may be useful for re-using compiler flags) --------
 
 set_target_properties(caf_internal PROPERTIES EXPORT_NAME internal)
@@ -188,25 +207,9 @@ else()
       CACHE INTERNAL "The version string used for shared library objects")
 endif()
 
-# -- install testing DSL headers -----------------------------------------------
+# -- create the libcaf_test target ahead of time for caf_core ------------------
 
-add_library(libcaf_test INTERFACE)
-
-set_target_properties(libcaf_test PROPERTIES EXPORT_NAME test)
-
-target_include_directories(libcaf_test INTERFACE
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/libcaf_test>)
-
-add_library(CAF::test ALIAS libcaf_test)
-
-install(DIRECTORY libcaf_test/caf/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caf
-        FILES_MATCHING PATTERN "*.hpp")
-
-install(TARGETS libcaf_test
-        EXPORT CAFTargets
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT test
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT test
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT test)
+add_library(libcaf_test)
 
 # -- add uninstall target if it does not exist yet -----------------------------
 
@@ -310,13 +313,14 @@ endfunction()
 #     ...
 #   SOURCES
 #     ...
-#   TEST_SOURCES
+#   LEGACY_TEST_SOURCES
 #     ...
-#   TEST_SUITES
+#   LEGACY_TEST_SUITES
 #     ...
 # )
 function(caf_add_component name)
-  set(varargs DEPENDENCIES HEADERS SOURCES TEST_SOURCES TEST_SUITES ENUM_TYPES)
+  set(varargs DEPENDENCIES HEADERS SOURCES ENUM_TYPES LEGACY_TEST_SOURCES
+              LEGACY_TEST_SUITES)
   cmake_parse_arguments(CAF_ADD_COMPONENT "" "" "${varargs}" ${ARGN})
   if(NOT CAF_ADD_COMPONENT_HEADERS)
     message(FATAL_ERROR "Cannot add CAF component without at least one header.")
@@ -332,26 +336,51 @@ function(caf_add_component name)
   set(pub_lib_target "libcaf_${name}")
   set(obj_lib_target "libcaf_${name}_obj")
   set(targets ${pub_lib_target} ${obj_lib_target})
-  add_library(${obj_lib_target} OBJECT
-              ${CAF_ADD_COMPONENT_HEADERS} ${CAF_ADD_COMPONENT_SOURCES})
+  add_library(${obj_lib_target} OBJECT ${CAF_ADD_COMPONENT_HEADERS})
   set_property(TARGET ${obj_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
   caf_target_link_libraries(${obj_lib_target}
                             ${CAF_ADD_COMPONENT_DEPENDENCIES})
-  add_library(${pub_lib_target}
-              "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
-              $<TARGET_OBJECTS:${obj_lib_target}>)
-  if(CAF_ENABLE_TESTING AND CAF_ADD_COMPONENT_TEST_SOURCES)
-    set(tst_bin_target "caf-${name}-test")
+  foreach(source_file ${CAF_ADD_COMPONENT_SOURCES})
+    get_filename_component(ext ${source_file} EXT)
+    if(ext STREQUAL ".cpp")
+      target_sources(${obj_lib_target} PRIVATE ${source_file})
+    elseif(ext STREQUAL ".test.cpp" AND CAF_ENABLE_TESTING)
+      get_filename_component(test_name ${source_file} NAME_WE)
+      get_filename_component(test_path ${source_file} DIRECTORY)
+      string(REPLACE "/" "-" test_name "${test_path}/${test_name}-test")
+      add_executable("${test_name}" ${source_file}
+                     $<TARGET_OBJECTS:${obj_lib_target}>)
+      target_link_libraries(${test_name} PRIVATE libcaf_test
+                            ${CAF_ADD_COMPONENT_DEPENDENCIES})
+      target_include_directories(${test_name} PRIVATE
+                                 "${CMAKE_CURRENT_SOURCE_DIR}"
+                                 "${CMAKE_CURRENT_BINARY_DIR}")
+      add_test(NAME ${test_name} COMMAND ${test_name})
+    endif()
+  endforeach()
+  if(NOT TARGET ${pub_lib_target})
+    add_library(${pub_lib_target}
+                "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
+                $<TARGET_OBJECTS:${obj_lib_target}>)
+  else()
+    target_sources(
+      ${pub_lib_target}
+      PRIVATE
+        "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
+        $<TARGET_OBJECTS:${obj_lib_target}>)
+  endif()
+  if(CAF_ENABLE_TESTING AND CAF_ADD_COMPONENT_LEGACY_TEST_SOURCES)
+    set(tst_bin_target "caf-${name}-legacy-test")
     list(APPEND targets ${tst_bin_target})
     add_executable(${tst_bin_target}
-                   ${CAF_ADD_COMPONENT_TEST_SOURCES}
+                   ${CAF_ADD_COMPONENT_LEGACY_TEST_SOURCES}
                    $<TARGET_OBJECTS:${obj_lib_target}>)
-    target_link_libraries(${tst_bin_target} PRIVATE CAF::test
+    target_link_libraries(${tst_bin_target} PRIVATE libcaf_test
                           ${CAF_ADD_COMPONENT_DEPENDENCIES})
     target_include_directories(${tst_bin_target} PRIVATE
-                               "${CMAKE_CURRENT_SOURCE_DIR}/test")
-    if(CAF_ADD_COMPONENT_TEST_SUITES)
-      caf_add_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_TEST_SUITES})
+                               "${CMAKE_CURRENT_SOURCE_DIR}/tests/legacy")
+    if(CAF_ADD_COMPONENT_LEGACY_TEST_SUITES)
+      caf_add_legacy_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_LEGACY_TEST_SUITES})
     endif()
   endif()
   target_link_libraries(${pub_lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
@@ -378,9 +407,34 @@ function(caf_add_component name)
   caf_export_and_install_lib(${name})
 endfunction()
 
+# -- convenience function for adding executable targets of tests ---------------
+
+# Usage:
+# caf_add_test_executable(
+#   foo
+#   DEPENDENCIES
+#     ...
+#   SOURCES
+#     ...
+# )
+function(caf_add_test_executable name)
+  if(NOT CAF_ENABLE_TESTING)
+    return()
+  endif()
+  set(varargs DEPENDENCIES SOURCES)
+  cmake_parse_arguments(args "" "" "${varargs}" ${ARGN})
+  if(NOT args_SOURCES)
+    message(FATAL_ERROR "Cannot add a CAF test executable without sources.")
+  endif()
+  add_executable(${name} ${args_SOURCES})
+  target_link_libraries(${name} PRIVATE CAF::internal ${args_DEPENDENCIES})
+endfunction()
+
 # -- build all components the user asked for -----------------------------------
 
 add_subdirectory(libcaf_core)
+
+add_subdirectory(libcaf_test)
 
 if(CAF_ENABLE_NET_MODULE)
   add_subdirectory(libcaf_net)

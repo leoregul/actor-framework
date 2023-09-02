@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <chrono>
-#include <cstddef>
-#include <memory>
-
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/intrusive/singly_linked.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/tracing_data.hpp"
+
+#include <chrono>
+#include <cstddef>
+#include <memory>
 
 namespace caf {
 
@@ -109,7 +109,7 @@ make_mailbox_element(strong_actor_ptr sender, message_id id,
 
 /// @relates mailbox_element
 template <class T, class... Ts>
-std::enable_if_t<!std::is_same<typename std::decay<T>::type, message>::value
+std::enable_if_t<!std::is_same_v<std::decay_t<T>, message>
                    || (sizeof...(Ts) > 0),
                  mailbox_element_ptr>
 make_mailbox_element(strong_actor_ptr sender, message_id id,

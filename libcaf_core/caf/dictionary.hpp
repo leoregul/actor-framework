@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include "caf/deep_to_string.hpp"
+
 #include <algorithm>
 #include <iterator>
 #include <map>
 #include <ostream>
 #include <string>
 #include <string_view>
-
-#include "caf/deep_to_string.hpp"
 
 namespace caf {
 
@@ -279,6 +279,24 @@ public:
   const_iterator upper_bound(std::string_view key) const {
     mapped_type_less cmp;
     return std::upper_bound(begin(), end(), key, cmp);
+  }
+
+  // -- removal ----------------------------------------------------------------
+
+  iterator erase(const_iterator i) {
+    return xs_.erase(i);
+  }
+
+  iterator erase(const_iterator first, const_iterator last) {
+    return xs_.erase(first, last);
+  }
+
+  size_type erase(std::string_view key) {
+    if (auto i = lower_bound(key); i != end() && i->first == key) {
+      erase(i);
+      return 1;
+    }
+    return 0;
   }
 
   // -- element access ---------------------------------------------------------

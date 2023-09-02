@@ -4,6 +4,11 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+#include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
+
 #include <cstddef>
 #include <cstring>
 #include <iosfwd>
@@ -11,11 +16,6 @@
 #include <limits>
 #include <string>
 #include <type_traits>
-
-#include "caf/config.hpp"
-#include "caf/detail/comparable.hpp"
-#include "caf/detail/core_export.hpp"
-#include "caf/fwd.hpp"
 
 namespace caf {
 
@@ -31,24 +31,26 @@ struct is_string_like {
     const U* x,
     // check if `x->data()` returns  const char*
     std::enable_if_t<
-      std::is_same<const char*, decltype(x->data())>::value>* = nullptr,
+      std::is_same_v<const char*, decltype(x->data())>>* = nullptr,
     // check if `x->size()` returns an integer
-    std::enable_if_t<std::is_integral<decltype(x->size())>::value>* = nullptr,
+    std::enable_if_t<std::is_integral_v<decltype(x->size())>>* = nullptr,
     // check if `x->find('?', 0)` is well-formed and returns an integer
     // (distinguishes vectors from strings)
-    std::enable_if_t<
-      std::is_integral<decltype(x->find('?', 0))>::value>* = nullptr);
+    std::enable_if_t<std::is_integral_v<decltype(x->find('?', 0))>>* = nullptr);
 
   // SFINAE fallback.
   static void sfinae(void*);
 
   // Result of SFINAE test.
-  using result_type
-    = decltype(sfinae(static_cast<typename std::decay<T>::type*>(nullptr)));
+  using result_type = decltype(sfinae(static_cast<std::decay_t<T>*>(nullptr)));
 
   // Trait result.
-  static constexpr bool value = std::is_same<bool, result_type>::value;
+  static constexpr bool value = std::is_same_v<bool, result_type>;
 };
+
+/// Convenience alias for `is_string_like<T>::value`.
+template <class T>
+constexpr bool is_string_like_v = is_string_like<T>::value;
 
 } // namespace detail
 
@@ -104,8 +106,7 @@ public:
 
   constexpr string_view(const string_view&) noexcept = default;
 
-  template <class T, class = typename std::enable_if<
-                       detail::is_string_like<T>::value>::type>
+  template <class T, class = std::enable_if_t<detail::is_string_like_v<T>>>
   constexpr string_view(const T& str) noexcept
     : data_(str.data()), size_(str.size()) {
     // nop

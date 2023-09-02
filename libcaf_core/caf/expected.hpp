@@ -5,19 +5,18 @@
 #pragma once
 
 #include "caf/config.hpp"
-
-#include <memory>
-#include <new>
-#include <ostream>
-#include <type_traits>
-#include <utility>
-
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
 #include "caf/is_error_code_enum.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/unit.hpp"
+
+#include <memory>
+#include <new>
+#include <ostream>
+#include <type_traits>
+#include <utility>
 
 namespace caf {
 
@@ -54,14 +53,12 @@ public:
   // -- static member variables ------------------------------------------------
 
   /// Stores whether move construct and move assign never throw.
-  static constexpr bool nothrow_move
-    = std::is_nothrow_move_constructible<T>::value
-      && std::is_nothrow_move_assignable<T>::value;
+  static constexpr bool nothrow_move = std::is_nothrow_move_constructible_v<T>
+                                       && std::is_nothrow_move_assignable_v<T>;
 
   /// Stores whether copy construct and copy assign never throw.
-  static constexpr bool nothrow_copy
-    = std::is_nothrow_copy_constructible<T>::value
-      && std::is_nothrow_copy_assignable<T>::value;
+  static constexpr bool nothrow_copy = std::is_nothrow_copy_constructible_v<T>
+                                       && std::is_nothrow_copy_assignable_v<T>;
 
   /// Stores whether swap() never throws.
   static constexpr bool nothrow_swap = std::is_nothrow_swappable_v<T>;
@@ -156,8 +153,7 @@ public:
   }
 
   template <class U>
-  typename std::enable_if<std::is_convertible<U, T>::value, expected&>::type
-  operator=(U x) {
+  std::enable_if_t<std::is_convertible_v<U, T>, expected&> operator=(U x) {
     return *this = T{std::move(x)};
   }
 
@@ -805,7 +801,7 @@ public:
     if (has_value())
       return f();
     else
-      return res_t{std::move(*error_)};
+      return res_t{*error_};
   }
 
   template <class F>
@@ -865,7 +861,7 @@ public:
     if constexpr (std::is_void_v<res_t>) {
       if (!has_value())
         f(std::move(*error_));
-      return std::move(*this);
+      return *this;
     } else {
       static_assert(std::is_same_v<expected, res_t>,
                     "F must return expected<T> or void");
@@ -917,7 +913,7 @@ public:
     if (has_value())
       return detail::expected_from_fn(std::forward<F>(f));
     else
-      return expected<res_t>{std::move(*error_)};
+      return expected<res_t>{*error_};
   }
 
   template <class F>

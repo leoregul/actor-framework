@@ -4,11 +4,6 @@
 
 #pragma once
 
-#include <optional>
-#include <tuple>
-#include <type_traits>
-#include <utility>
-
 #include "caf/const_typed_message_view.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/core_export.hpp"
@@ -26,6 +21,11 @@
 #include "caf/timespan.hpp"
 #include "caf/typed_message_view.hpp"
 #include "caf/typed_response_promise.hpp"
+
+#include <optional>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 namespace caf {
 
@@ -73,10 +73,9 @@ struct with_generic_timeout<false, std::tuple<Ts...>> {
 
 template <class... Ts>
 struct with_generic_timeout<true, std::tuple<Ts...>> {
-  using type =
-    typename tl_apply<typename tl_replace_back<
-                        type_list<Ts...>, generic_timeout_definition>::type,
-                      std::tuple>::type;
+  using type = tl_apply_t<
+    tl_replace_back_t<type_list<Ts...>, generic_timeout_definition>,
+    std::tuple>;
 };
 
 struct dummy_timeout_definition {
@@ -119,7 +118,7 @@ public:
       if (arg_types == msg.types()) {
         typename trait::message_view_type xs{msg};
         using fun_result = decltype(detail::apply_args(fun, xs));
-        if constexpr (std::is_same<void, fun_result>::value) {
+        if constexpr (std::is_same_v<void, fun_result>) {
           detail::apply_args(fun, xs);
           f(unit);
         } else {

@@ -4,6 +4,20 @@
 
 #pragma once
 
+#include "caf/abstract_actor.hpp"
+#include "caf/config.hpp"
+#include "caf/deep_to_string.hpp"
+#include "caf/detail/arg_wrapper.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/log_level.hpp"
+#include "caf/detail/pp.hpp"
+#include "caf/detail/pretty_type_name.hpp"
+#include "caf/detail/scope_guard.hpp"
+#include "caf/detail/sync_ring_buffer.hpp"
+#include "caf/fwd.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/timestamp.hpp"
+
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -13,23 +27,6 @@
 #include <type_traits>
 #include <typeinfo>
 #include <unordered_map>
-
-#include "caf/abstract_actor.hpp"
-#include "caf/config.hpp"
-#include "caf/deep_to_string.hpp"
-#include "caf/detail/arg_wrapper.hpp"
-#include "caf/detail/core_export.hpp"
-#include "caf/detail/log_level.hpp"
-#include "caf/detail/pp.hpp"
-#include "caf/detail/pretty_type_name.hpp"
-#include "caf/detail/ringbuffer.hpp"
-#include "caf/detail/scope_guard.hpp"
-#include "caf/fwd.hpp"
-#include "caf/intrusive/drr_queue.hpp"
-#include "caf/intrusive/fifo_inbox.hpp"
-#include "caf/intrusive/singly_linked.hpp"
-#include "caf/ref_counted.hpp"
-#include "caf/timestamp.hpp"
 
 /*
  * To enable logging, you have to define CAF_DEBUG. This enables
@@ -169,7 +166,7 @@ public:
     line_builder();
 
     template <class T>
-    detail::enable_if_t<!std::is_pointer<T>::value, line_builder&>
+    std::enable_if_t<!std::is_pointer_v<T>, line_builder&>
     operator<<(const T& x) {
       if (!str_.empty())
         str_ += " ";
@@ -277,6 +274,12 @@ private:
 
   logger(actor_system& sys);
 
+  // -- called by the actor_system when running with a test coordinator --------
+
+  void inline_output(bool value) noexcept {
+    cfg_.inline_output = value;
+  }
+
   // -- initialization ---------------------------------------------------------
 
   void init(actor_system_config& cfg);
@@ -339,7 +342,7 @@ private:
   std::fstream file_;
 
   // Filled with log events by other threads.
-  detail::ringbuffer<event, queue_size> queue_;
+  detail::sync_ring_buffer<event, queue_size> queue_;
 
   // Stores the assembled name of the log file.
   std::string file_name_;

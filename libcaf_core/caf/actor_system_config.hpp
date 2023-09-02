@@ -4,15 +4,6 @@
 
 #pragma once
 
-#include <atomic>
-#include <functional>
-#include <memory>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <typeindex>
-#include <unordered_map>
-
 #include "caf/actor_factory.hpp"
 #include "caf/actor_profiler.hpp"
 #include "caf/config_option.hpp"
@@ -27,11 +18,24 @@
 #include "caf/settings.hpp"
 #include "caf/thread_hook.hpp"
 
+#include <atomic>
+#include <functional>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <typeindex>
+#include <unordered_map>
+
 namespace caf {
 
 /// Configures an `actor_system` on startup.
 class CAF_CORE_EXPORT actor_system_config {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  friend class actor_system;
+
   // -- member types -----------------------------------------------------------
 
   using hook_factory = std::function<io::hook*(actor_system&)>;
@@ -116,7 +120,7 @@ public:
   /// @experimental
   template <class T, class... Ts>
   actor_system_config& add_actor_type(std::string name) {
-    using handle = typename infer_handle_from_class<T>::type;
+    using handle = infer_handle_from_class_t<T>;
     static_assert(detail::is_complete<type_id<handle>>);
     return add_actor_factory(std::move(name), make_actor_factory<T, Ts...>());
   }
@@ -126,7 +130,7 @@ public:
   /// @experimental
   template <class F>
   actor_system_config& add_actor_type(std::string name, F f) {
-    using handle = typename infer_handle_from_fun<F>::type;
+    using handle = infer_handle_from_fun_t<F>;
     static_assert(detail::is_complete<type_id<handle>>);
     return add_actor_factory(std::move(name), make_actor_factory(std::move(f)));
   }
@@ -303,6 +307,8 @@ protected:
   config_option_set custom_options_;
 
 private:
+  virtual detail::mailbox_factory* mailbox_factory();
+
   void set_remainder(string_list args);
 
   mutable std::vector<char*> c_args_remainder_;

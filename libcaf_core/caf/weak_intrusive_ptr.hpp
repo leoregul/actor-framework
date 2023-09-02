@@ -4,13 +4,13 @@
 
 #pragma once
 
+#include "caf/detail/comparable.hpp"
+#include "caf/intrusive_ptr.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
-
-#include "caf/detail/comparable.hpp"
-#include "caf/intrusive_ptr.hpp"
 
 namespace caf {
 
@@ -51,8 +51,7 @@ public:
   template <class Y>
   weak_intrusive_ptr(weak_intrusive_ptr<Y> other) noexcept
     : ptr_(other.detach()) {
-    static_assert(std::is_convertible<Y*, T*>::value,
-                  "Y* is not assignable to T*");
+    static_assert(std::is_convertible_v<Y*, T*>, "Y* is not assignable to T*");
   }
 
   ~weak_intrusive_ptr() {

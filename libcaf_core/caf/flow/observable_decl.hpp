@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/async/fwd.hpp"
 #include "caf/cow_vector.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/is_complete.hpp"
@@ -99,6 +100,10 @@ public:
   template <class Predicate>
   transformation<step::filter<Predicate>> filter(Predicate prediate);
 
+  /// Returns a transformation that ignores all items and only forwards calls to
+  /// `on_complete` and `on_error`.
+  transformation<step::ignore_elements<T>> ignore_elements();
+
   /// Returns a transformation that applies `f` to each input and emits the
   /// result of the function application.
   template <class F>
@@ -117,8 +122,23 @@ public:
   /// Returns a transformation that selects all but the first `n` items.
   transformation<step::skip<T>> skip(size_t n);
 
+  /// Returns a transformation that selects only the item at index `n`.
+  transformation<step::element_at<T>> element_at(size_t n);
+
+  /// Returns a transformation that discards only the last `n` items.
+  transformation<step::skip_last<T>> skip_last(size_t n);
+
   /// Returns a transformation that selects only the first `n` items.
   transformation<step::take<T>> take(size_t n);
+
+  /// Returns a transformation that selects only the first item.
+  transformation<step::take<T>> first();
+
+  /// Returns a transformation that selects only the last `n` items.
+  transformation<step::take_last<T>> take_last(size_t n);
+
+  /// Returns a transformation that selects only the last item.
+  transformation<step::take_last<T>> last();
 
   /// Returns a transformation that selects all value until the `predicate`
   /// returns false.
@@ -249,6 +269,9 @@ public:
   async::consumer_resource<T> to_resource() {
     return to_resource(defaults::flow::buffer_size, defaults::flow::min_demand);
   }
+
+  /// Creates a publisher that makes emitted items available asynchronously.
+  async::publisher<T> to_publisher();
 
   const observable& as_observable() const& noexcept {
     return *this;

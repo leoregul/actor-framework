@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <cstdint>
-#include <optional>
-#include <type_traits>
-
 #include "caf/config.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/chars.hpp"
@@ -16,6 +12,10 @@
 #include "caf/detail/parser/sub_ascii.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
+
+#include <cstdint>
+#include <optional>
+#include <type_traits>
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 
@@ -171,7 +171,7 @@ void read_floating_point(State& ps, Consumer&& consumer,
 
 template <class State, class Consumer>
 void read_floating_point(State& ps, Consumer&& consumer) {
-  using consumer_type = typename std::decay<Consumer>::type;
+  using consumer_type = std::decay_t<Consumer>;
   using value_type = typename consumer_type::value_type;
   return read_floating_point(ps, consumer, std::optional<value_type>{});
 }

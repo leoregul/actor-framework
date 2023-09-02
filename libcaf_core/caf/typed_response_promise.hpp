@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "caf/detail/type_list.hpp"
 #include "caf/make_message.hpp"
 #include "caf/response_promise.hpp"
+
+#include <type_traits>
 
 namespace caf {
 
@@ -75,14 +75,13 @@ public:
 
   /// Satisfies the promise by sending a non-error response message.
   template <class... Us>
-  std::enable_if_t<(std::is_constructible<Ts, Us>::value && ...)>
-  deliver(Us... xs) {
+  std::enable_if_t<(std::is_constructible_v<Ts, Us> && ...)> deliver(Us... xs) {
     promise_.deliver(Ts{std::forward<Us>(xs)}...);
   }
 
   /// Satisfies the promise by sending an empty response message.
   template <class L = detail::type_list<Ts...>>
-  std::enable_if_t<std::is_same<L, detail::type_list<void>>::value> deliver() {
+  std::enable_if_t<std::is_same_v<L, detail::type_list<void>>> deliver() {
     promise_.deliver();
   }
 
@@ -96,7 +95,7 @@ public:
   /// message.
   template <class T>
   std::enable_if_t<
-    std::is_same<detail::type_list<T>, detail::type_list<Ts...>>::value>
+    std::is_same_v<detail::type_list<T>, detail::type_list<Ts...>>>
   deliver(expected<T> x) {
     promise_.deliver(std::move(x));
   }

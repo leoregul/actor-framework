@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <set>
-#include <string>
-
 #include "caf/actor_addr.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/infer_handle.hpp"
+
+#include <set>
+#include <string>
 
 namespace caf {
 
@@ -36,7 +36,7 @@ public:
   }
 
   void operator()(Ts... xs) {
-    if constexpr (std::is_convertible<R, Bhvr>::value) {
+    if constexpr (std::is_convertible_v<R, Bhvr>) {
       auto bhvr = f_(xs...);
       *bhvr_ = std::move(bhvr.unbox());
     } else {
@@ -59,7 +59,7 @@ public:
   }
 
   void operator()(Ts... xs) {
-    if constexpr (std::is_convertible<R, Bhvr>::value) {
+    if constexpr (std::is_convertible_v<R, Bhvr>) {
       auto bhvr = f_(ptr_, xs...);
       *bhvr_ = std::move(bhvr.unbox());
     } else {
@@ -103,7 +103,7 @@ actor_factory make_actor_factory(F fun) {
       return {};
     cfg.init_fun = actor_config::init_fun_type{
       [=](local_actor* x) mutable -> behavior {
-        using ctrait = typename detail::get_callable_trait<F>::type;
+        using ctrait = detail::get_callable_trait_t<F>;
         using fd = fun_decorator<F, impl, behavior_t, trait::mode,
                                  typename ctrait::result_type,
                                  typename ctrait::arg_types>;
@@ -132,7 +132,7 @@ struct dyn_spawn_class_helper {
 template <class T, class... Ts>
 actor_factory_result dyn_spawn_class(actor_config& cfg, message& msg) {
   CAF_ASSERT(cfg.host);
-  using handle = typename infer_handle_from_class<T>::type;
+  using handle = infer_handle_from_class_t<T>;
   handle hdl;
   message_handler factory{dyn_spawn_class_helper<handle, T, Ts...>{hdl, cfg}};
   factory(msg);
@@ -142,10 +142,9 @@ actor_factory_result dyn_spawn_class(actor_config& cfg, message& msg) {
 
 template <class T, class... Ts>
 actor_factory make_actor_factory() {
-  static_assert(
-    detail::conjunction<std::is_lvalue_reference<Ts>::value...>::value,
-    "all Ts must be lvalue references");
-  static_assert(std::is_base_of<local_actor, T>::value,
+  static_assert((std::is_lvalue_reference_v<Ts> && ...),
+                "all Ts must be lvalue references");
+  static_assert(std::is_base_of_v<local_actor, T>,
                 "T is not derived from local_actor");
   return &dyn_spawn_class<T, Ts...>;
 }

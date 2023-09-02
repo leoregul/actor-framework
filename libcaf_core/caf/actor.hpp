@@ -4,12 +4,6 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <string>
-#include <type_traits>
-#include <utility>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_traits.hpp"
@@ -19,6 +13,12 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <type_traits>
+#include <utility>
 
 namespace caf {
 
@@ -51,13 +51,13 @@ public:
   actor(const scoped_actor&);
 
   template <class T,
-            class = detail::enable_if_t<actor_traits<T>::is_dynamically_typed>>
+            class = std::enable_if_t<actor_traits<T>::is_dynamically_typed>>
   actor(T* ptr) : ptr_(ptr->ctrl()) {
     CAF_ASSERT(ptr != nullptr);
   }
 
   template <class T,
-            class = detail::enable_if_t<actor_traits<T>::is_dynamically_typed>>
+            class = std::enable_if_t<actor_traits<T>::is_dynamically_typed>>
   actor& operator=(intrusive_ptr<T> ptr) {
     actor tmp{std::move(ptr)};
     swap(tmp);
@@ -65,7 +65,7 @@ public:
   }
 
   template <class T,
-            class = detail::enable_if_t<actor_traits<T>::is_dynamically_typed>>
+            class = std::enable_if_t<actor_traits<T>::is_dynamically_typed>>
   actor& operator=(T* ptr) {
     actor tmp{ptr};
     swap(tmp);

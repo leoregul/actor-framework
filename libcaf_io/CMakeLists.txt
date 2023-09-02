@@ -18,49 +18,50 @@ caf_add_component(
   HEADERS
     ${CAF_IO_HEADERS}
   SOURCES
-    src/detail/prometheus_broker.cpp
-    src/detail/remote_group_module.cpp
-    src/detail/socket_guard.cpp
-    src/io/abstract_broker.cpp
-    src/io/basp/header.cpp
-    src/io/basp/instance.cpp
-    src/io/basp/message_queue.cpp
-    src/io/basp/routing_table.cpp
-    src/io/basp/worker.cpp
-    src/io/basp_broker.cpp
-    src/io/broker.cpp
-    src/io/connection_helper.cpp
-    src/io/datagram_servant.cpp
-    src/io/doorman.cpp
-    src/io/middleman.cpp
-    src/io/middleman_actor.cpp
-    src/io/middleman_actor_impl.cpp
-    src/io/network/acceptor.cpp
-    src/io/network/acceptor_manager.cpp
-    src/io/network/datagram_handler.cpp
-    src/io/network/datagram_manager.cpp
-    src/io/network/datagram_servant_impl.cpp
-    src/io/network/default_multiplexer.cpp
-    src/io/network/doorman_impl.cpp
-    src/io/network/event_handler.cpp
-    src/io/network/interfaces.cpp
-    src/io/network/ip_endpoint.cpp
-    src/io/network/manager.cpp
-    src/io/network/multiplexer.cpp
-    src/io/network/native_socket.cpp
-    src/io/network/pipe_reader.cpp
-    src/io/network/protocol.cpp
-    src/io/network/receive_buffer.cpp
-    src/io/network/scribe_impl.cpp
-    src/io/network/stream.cpp
-    src/io/network/stream_manager.cpp
-    src/io/network/test_multiplexer.cpp
-    src/io/scribe.cpp
-    src/policy/tcp.cpp
-    src/policy/udp.cpp
-  TEST_SOURCES
-    test/io-test.cpp
-  TEST_SUITES
+    caf/detail/prometheus_broker.cpp
+    caf/detail/remote_group_module.cpp
+    caf/detail/socket_guard.cpp
+    caf/io/abstract_broker.cpp
+    caf/io/basp/header.cpp
+    caf/io/basp/instance.cpp
+    caf/io/basp/message_queue.cpp
+    caf/io/basp/routing_table.cpp
+    caf/io/basp/worker.cpp
+    caf/io/basp_broker.cpp
+    caf/io/broker.cpp
+    caf/io/connection_helper.cpp
+    caf/io/datagram_servant.cpp
+    caf/io/doorman.cpp
+    caf/io/middleman.cpp
+    caf/io/middleman_actor.cpp
+    caf/io/middleman_actor_impl.cpp
+    caf/io/network/acceptor.cpp
+    caf/io/network/acceptor_manager.cpp
+    caf/io/network/datagram_handler.cpp
+    caf/io/network/datagram_manager.cpp
+    caf/io/network/datagram_servant_impl.cpp
+    caf/io/network/default_multiplexer.cpp
+    caf/io/network/doorman_impl.cpp
+    caf/io/network/event_handler.cpp
+    caf/io/network/interfaces.cpp
+    caf/io/network/ip_endpoint.cpp
+    caf/io/network/manager.cpp
+    caf/io/network/multiplexer.cpp
+    caf/io/network/native_socket.cpp
+    caf/io/network/pipe_reader.cpp
+    caf/io/network/protocol.cpp
+    caf/io/network/receive_buffer.cpp
+    caf/io/network/receive_buffer.test.cpp
+    caf/io/network/scribe_impl.cpp
+    caf/io/network/stream.cpp
+    caf/io/network/stream_manager.cpp
+    caf/io/network/test_multiplexer.cpp
+    caf/io/scribe.cpp
+    caf/policy/tcp.cpp
+    caf/policy/udp.cpp
+  LEGACY_TEST_SOURCES
+    tests/legacy/io-test.cpp
+  LEGACY_TEST_SUITES
     detail.prometheus_broker
     io.basp.message_queue
     io.basp_broker
@@ -69,7 +70,6 @@ caf_add_component(
     io.monitor
     io.network.default_multiplexer
     io.network.ip_endpoint
-    io.receive_buffer
     io.remote_actor
     io.remote_group
     io.remote_spawn
@@ -77,5 +77,5 @@ caf_add_component(
     io.worker)
 
 if(CAF_ENABLE_TESTING AND UNIX)
-  caf_add_test_suites(caf-io-test io.middleman)
+  caf_add_legacy_test_suites(caf-io-legacy-test io.middleman)
 endif()

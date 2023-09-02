@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <functional>
+#include "caf/test/dsl.hpp"
 
 #include "caf/io/all.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
 
-#include "caf/test/dsl.hpp"
+#include <functional>
 
 class test_node_fixture_config : public caf::actor_system_config {
 public:
@@ -61,7 +61,7 @@ public:
     bb = mm.named_broker<caf::io::basp_broker>("BASP");
   }
 
-  test_node_fixture() : test_node_fixture([=] { this->run(); }) {
+  test_node_fixture() : test_node_fixture([this] { this->run(); }) {
     // nop
   }
 
@@ -119,7 +119,7 @@ public:
 
 template <class Iterator>
 void exec_all_fixtures(Iterator first, Iterator last) {
-  using fixture_ptr = caf::detail::decay_t<decltype(*first)>;
+  using fixture_ptr = std::decay_t<decltype(*first)>;
   auto advance = [](fixture_ptr x) {
     return x->sched.try_run_once() || x->mpx.read_data()
            || x->mpx.try_exec_runnable() || x->mpx.try_accept_connection();

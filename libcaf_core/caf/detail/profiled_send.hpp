@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <vector>
-
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
@@ -15,6 +13,8 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/message_id.hpp"
 #include "caf/no_stages.hpp"
+
+#include <vector>
 
 namespace caf::detail {
 
@@ -38,7 +38,7 @@ disposable profiled_send(Self* self, SelfHandle&& src, const Handle& dst,
                          actor_clock& clock, actor_clock::time_point timeout,
                          [[maybe_unused]] message_id msg_id, Ts&&... xs) {
   if (dst) {
-    if constexpr (std::is_same<Handle, group>::value) {
+    if constexpr (std::is_same_v<Handle, group>) {
       return clock.schedule_message(timeout, dst, std::forward<SelfHandle>(src),
                                     make_message(std::forward<Ts>(xs)...));
     } else {

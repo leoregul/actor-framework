@@ -4,18 +4,18 @@
 
 #pragma once
 
-#include <cstddef>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <utility>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
 #include "caf/load_inspector_base.hpp"
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
+
+#include <cstddef>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 namespace caf {
 
@@ -158,7 +158,7 @@ public:
 
   /// @copydoc value
   template <class T>
-  std::enable_if_t<std::is_integral<T>::value, bool> value(T& x) noexcept {
+  std::enable_if_t<std::is_integral_v<T>, bool> value(T& x) noexcept {
     auto tmp = detail::squashed_int_t<T>{0};
     if (value(tmp)) {
       x = static_cast<T>(tmp);

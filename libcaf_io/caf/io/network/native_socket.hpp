@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-
 #include "caf/config.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/expected.hpp"
+
+#include <cstdint>
+#include <string>
 
 namespace caf::io::network {
 
@@ -28,7 +28,7 @@ using socket_recv_ptr = void*;
 using socket_size_type = unsigned;
 #endif
 
-using signed_size_type = std::make_signed<size_t>::type;
+using signed_size_type = std::make_signed_t<size_t>;
 
 // More bootstrapping.
 CAF_IO_EXPORT extern const int ec_out_of_memory;

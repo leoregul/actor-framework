@@ -37,7 +37,7 @@ struct exec_main_helper<detail::type_list<actor_system&, const T&>> {
 
 template <class T>
 void exec_main_init_meta_objects_single() {
-  if constexpr (std::is_base_of<actor_system::module, T>::value)
+  if constexpr (std::is_base_of_v<actor_system::module, T>)
     T::init_global_meta_objects();
   else
     init_global_meta_objects<T>();
@@ -50,24 +50,23 @@ void exec_main_init_meta_objects() {
 
 template <class T>
 void exec_main_load_module(actor_system_config& cfg) {
-  if constexpr (std::is_base_of<actor_system::module, T>::value)
+  if constexpr (std::is_base_of_v<actor_system::module, T>)
     cfg.template load<T>();
 }
 
 template <class... Ts, class F = void (*)(actor_system&)>
 int exec_main(F fun, int argc, char** argv) {
-  using trait = typename detail::get_callable_trait<F>::type;
+  using trait = detail::get_callable_trait_t<F>;
   using arg_types = typename trait::arg_types;
   static_assert(detail::tl_size<arg_types>::value == 1
                   || detail::tl_size<arg_types>::value == 2,
                 "main function must have one or two arguments");
-  static_assert(std::is_same<typename detail::tl_head<arg_types>::type,
-                             actor_system&>::value,
+  static_assert(std::is_same_v<detail::tl_head_t<arg_types>, actor_system&>,
                 "main function must take actor_system& as first parameter");
-  using arg2 = typename detail::tl_at<arg_types, 1>::type;
-  using decayed_arg2 = typename std::decay<arg2>::type;
-  static_assert(std::is_same<arg2, unit_t>::value
-                  || (std::is_base_of<actor_system_config, decayed_arg2>::value
+  using arg2 = detail::tl_at_t<arg_types, 1>;
+  using decayed_arg2 = std::decay_t<arg2>;
+  static_assert(std::is_same_v<arg2, unit_t>
+                  || (std::is_base_of_v<actor_system_config, decayed_arg2>
                       && std::is_same<arg2, const decayed_arg2&>::value),
                 "second parameter of main function must take a subtype of "
                 "actor_system_config as const reference");
@@ -95,7 +94,7 @@ int exec_main(F fun, int argc, char** argv) {
   }
   helper f;
   using result_type = decltype(f(fun, system, cfg));
-  if constexpr (std::is_convertible<result_type, int>::value) {
+  if constexpr (std::is_convertible_v<result_type, int>) {
     return f(fun, system, cfg);
   } else {
     f(fun, system, cfg);

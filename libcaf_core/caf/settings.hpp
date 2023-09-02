@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <string_view>
-
 #include "caf/config_value.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/raise_error.hpp"
+
+#include <string_view>
 
 namespace caf {
 
@@ -63,7 +63,7 @@ template <class To = get_or_auto_deduce, class Fallback>
 auto get_or(const settings& xs, std::string_view name, Fallback&& fallback) {
   if (auto ptr = get_if(&xs, name)) {
     return get_or<To>(*ptr, std::forward<Fallback>(fallback));
-  } else if constexpr (std::is_same<To, get_or_auto_deduce>::value) {
+  } else if constexpr (std::is_same_v<To, get_or_auto_deduce>) {
     using guide = get_or_deduction_guide<std::decay_t<Fallback>>;
     return guide::convert(std::forward<Fallback>(fallback));
   } else {

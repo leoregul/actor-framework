@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include "caf/async/spsc_buffer.hpp"
-#include "caf/detail/ws_flow_bridge.hpp"
-#include "caf/disposable.hpp"
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/client_factory_base.hpp"
 #include "caf/net/ssl/connection.hpp"
@@ -14,6 +11,10 @@
 #include "caf/net/web_socket/client.hpp"
 #include "caf/net/web_socket/config.hpp"
 #include "caf/net/web_socket/framing.hpp"
+
+#include "caf/async/spsc_buffer.hpp"
+#include "caf/detail/ws_flow_bridge.hpp"
+#include "caf/disposable.hpp"
 #include "caf/timespan.hpp"
 
 #include <chrono>
@@ -98,9 +99,8 @@ private:
     auto bridge = bridge_t::make(std::move(a2s_pull), std::move(s2a_push));
     auto bridge_ptr = bridge.get();
     auto impl = client::make(std::move(cfg.hs), std::move(bridge));
-    auto fd = conn.fd();
     auto transport = transport_t::make(std::move(conn), std::move(impl));
-    transport->active_policy().connect(fd);
+    transport->active_policy().connect();
     auto ptr = socket_manager::make(cfg.mpx, std::move(transport));
     bridge_ptr->self_ref(ptr->as_disposable());
     cfg.mpx->start(ptr);

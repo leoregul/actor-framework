@@ -4,12 +4,6 @@
 
 #pragma once
 
-#include "caf/async/blocking_producer.hpp"
-#include "caf/defaults.hpp"
-#include "caf/detail/accept_handler.hpp"
-#include "caf/detail/connection_factory.hpp"
-#include "caf/detail/lp_flow_bridge.hpp"
-#include "caf/fwd.hpp"
 #include "caf/net/checked_socket.hpp"
 #include "caf/net/dsl/server_factory_base.hpp"
 #include "caf/net/http/server.hpp"
@@ -19,6 +13,13 @@
 #include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/ssl/transport.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
+
+#include "caf/async/blocking_producer.hpp"
+#include "caf/defaults.hpp"
+#include "caf/detail/accept_handler.hpp"
+#include "caf/detail/connection_factory.hpp"
+#include "caf/detail/lp_flow_bridge.hpp"
+#include "caf/fwd.hpp"
 #include "caf/none.hpp"
 
 #include <cstdint>
@@ -99,10 +100,9 @@ public:
     auto bridge = bridge_t::make(producer_);
     auto bridge_ptr = bridge.get();
     auto impl = net::lp::framing::make(std::move(bridge));
-    auto fd = conn.fd();
     auto transport = Transport::make(std::move(conn), std::move(impl));
     transport->max_consecutive_reads(max_consecutive_reads_);
-    transport->active_policy().accept(fd);
+    transport->active_policy().accept();
     auto mgr = net::socket_manager::make(mpx, std::move(transport));
     bridge_ptr->self_ref(mgr->as_disposable());
     return mgr;

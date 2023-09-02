@@ -6,6 +6,7 @@
 
 #include "caf/async/consumer.hpp"
 #include "caf/async/producer.hpp"
+#include "caf/async/publisher.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/cow_tuple.hpp"
 #include "caf/cow_vector.hpp"
@@ -212,14 +213,44 @@ public:
     return fn(std::move(*this));
   }
 
+  /// @copydoc observable::element_at
+  auto element_at(size_t n) && {
+    return add_step(step::element_at<output_type>{n});
+  }
+
+  /// @copydoc observable::ignore_elements
+  auto ignore_elements() && {
+    return add_step(step::ignore_elements<output_type>{});
+  }
+
   /// @copydoc observable::skip
   auto skip(size_t n) && {
     return add_step(step::skip<output_type>{n});
   }
 
+  /// @copydoc observable::skip_last
+  auto skip_last(size_t n) && {
+    return add_step(step::skip_last<output_type>{n});
+  }
+
   /// @copydoc observable::take
   auto take(size_t n) && {
     return add_step(step::take<output_type>{n});
+  }
+
+  /// @copydoc observable::first
+  auto first() && {
+    return add_step(step::take<output_type>{1});
+  }
+
+  /// @copydoc observable::take_last
+  auto take_last(size_t n) && {
+    return add_step(step::take_last<output_type>{n});
+  }
+
+  /// @copydoc observable::last
+  auto last() && {
+    return add_step(step::take_last<output_type>{1});
   }
 
   /// @copydoc observable::buffer
@@ -375,6 +406,11 @@ public:
   async::consumer_resource<output_type>
   to_resource(size_t buffer_size, size_t min_request_size) && {
     return materialize().to_resource(buffer_size, min_request_size);
+  }
+
+  /// @copydoc observable::to_resource
+  async::publisher<output_type> to_publisher() && {
+    return materialize().to_publisher();
   }
 
   /// @copydoc observable::observe_on
@@ -573,13 +609,43 @@ observable<T>::reduce(Init init, Reducer reducer) {
 }
 
 template <class T>
+transformation<step::element_at<T>> observable<T>::element_at(size_t n) {
+  return transform(step::element_at<T>{n});
+}
+
+template <class T>
+transformation<step::ignore_elements<T>> observable<T>::ignore_elements() {
+  return transform(step::ignore_elements<T>{});
+}
+
+template <class T>
 transformation<step::skip<T>> observable<T>::skip(size_t n) {
   return transform(step::skip<T>{n});
 }
 
 template <class T>
+transformation<step::skip_last<T>> observable<T>::skip_last(size_t n) {
+  return transform(step::skip_last<T>{n});
+}
+
+template <class T>
 transformation<step::take<T>> observable<T>::take(size_t n) {
   return transform(step::take<T>{n});
+}
+
+template <class T>
+transformation<step::take<T>> observable<T>::first() {
+  return transform(step::take<T>{1});
+}
+
+template <class T>
+transformation<step::take_last<T>> observable<T>::take_last(size_t n) {
+  return transform(step::take_last<T>{n});
+}
+
+template <class T>
+transformation<step::take_last<T>> observable<T>::last() {
+  return transform(step::take_last<T>{1});
 }
 
 template <class T>
@@ -760,6 +826,11 @@ observable<T>::to_resource(size_t buffer_size, size_t min_request_size) {
   up->init(buf);
   subscribe(up->as_observer());
   return async::consumer_resource<T>{std::move(buf)};
+}
+
+template <class T>
+async::publisher<T> observable<T>::to_publisher() {
+  return async::publisher<T>::from(*this);
 }
 
 } // namespace caf::flow

@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <cstddef>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
@@ -20,6 +18,8 @@
 #include "caf/typed_actor_view_base.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_response_promise.hpp"
+
+#include <cstddef>
 
 namespace caf {
 
@@ -63,8 +63,7 @@ public:
   /// Creates a new `typed_actor` type by extending this one with another
   /// `typed_actor`.
   template <class... Ts>
-  using extend_with =
-    typename detail::extend_with_helper<typed_actor, Ts...>::type;
+  using extend_with = detail::extend_with_helper_t<typed_actor, Ts...>;
 
   /// Identifies the behavior type actors of this kind use
   /// for their behavior stack.
@@ -121,7 +120,7 @@ public:
 
   // allow `handle_type{this}` for typed actors
   template <class T,
-            class = detail::enable_if_t<actor_traits<T>::is_statically_typed>>
+            class = std::enable_if_t<actor_traits<T>::is_statically_typed>>
   typed_actor(T* ptr) : ptr_(ptr->ctrl()) {
     static_assert(
       detail::tl_subset_of<signatures, typename T::signatures>::value,
@@ -131,7 +130,7 @@ public:
 
   // Enable `handle_type{self}` for typed actor views.
   template <class T, class = std::enable_if_t<
-                       std::is_base_of<typed_actor_view_base, T>::value>>
+                       std::is_base_of_v<typed_actor_view_base, T>>>
   explicit typed_actor(T ptr) : ptr_(ptr.ctrl()) {
     static_assert(
       detail::tl_subset_of<signatures, typename T::signatures>::value,
@@ -298,6 +297,8 @@ bool operator!=(std::nullptr_t, const typed_actor<Xs...>& x) noexcept {
   return !(x == nullptr);
 }
 
+CAF_PUSH_DEPRECATED_WARNING
+
 /// Returns a new actor that implements the composition `f.g(x) = f(g(x))`.
 /// @relates typed_actor
 template <class... Xs, class... Ys>
@@ -313,6 +314,8 @@ operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
     actor_cast<strong_actor_ptr>(std::move(f)),
     actor_cast<strong_actor_ptr>(std::move(g)), std::move(mts));
 }
+
+CAF_POP_WARNINGS
 
 } // namespace caf
 

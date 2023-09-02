@@ -3,7 +3,62 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+
 ## [Unreleased]
+
+### Added
+
+- The class `caf::telemetry::label` now has a new `compare` overload that
+  accepts a `caf::telemetry::label_view` to make the interface of the both
+  classes symmetrical.
+- The template class `caf::dictionary` now has new member functions for erasing
+  elements.
+- The CLI argument parser now supports a space separator when using long
+  argument names, e.g., `--foo bar`. This is in addition to the existing
+  `--foo=bar` syntax.
+- The functions `make_message` and `make_error` now support `std::string_view`
+  as input and automatically convert it to `std::string`.
+- To make it easier to set up asynchronous flows, CAF now provides a new class:
+  `caf::async::publisher`. Any observable can be transformed into a publisher by
+  calling `to_publisher`. The publisher can then be used to subscribe to the
+  observable from other actors or threads. The publisher has only a single
+  member function: `observe_on`. It converts the publisher back into an
+  observable. This new abstraction allows users to set up asynchronous flows
+  without having to manually deal with SPSC buffers.
+
+### Changed
+
+- When using CAF to parse CLI arguments, the output of `--help` now includes all
+  user-defined options. Previously, only options in the global category or
+  options with a short name were included. Only CAF options are now excluded
+  from the output. They will still be included in the output of `--long-help`.
+- The output of `--dump-config` now only contains CAF options from loaded
+  modules. Previously, it also included options from modules that were not
+  loaded.
+- We renamed `caf::flow::item_publisher` to `caf::flow::multicaster` to better
+  reflect its purpose and to avoid confusion with the new
+  `caf::async::publisher`.
+- When failing to deserialize a request, the sender will receive an error of
+  kind `sec::malformed_message`.
+- When implementing custom protocol layers that sit on top of an octet stream,
+  the `delta` byte span passed to `consume` now resets whenever returning a
+  positive value from `consume`.
+
+### Fixed
+
+- Fix build errors with exceptions disabled.
+- Fix a regression in `--dump-config` that caused CAF applications to emit
+  malformed output.
+- Fix handling of WebSocket frames that are exactly on the 65535 byte limit.
+- Fix crash when using a fallback value for optional values (#1427).
+- Using `take(0)` on an observable now properly creates an observable that calls
+  `on_complete` on its subscriber on the first activity of the source
+  observable. Previously, the created observable would never reach its threshold
+  and attempt to buffer all values indefinitely.
+- The comparison operator of `intrusive_ptr` no longer accidentally creates new
+  `intrusive_ptr` instances when comparing to raw pointers.
+
+## [0.19.2] - 2023-06-13
 
 ### Changed
 
@@ -21,6 +76,18 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - Add missing initialization code for the new caf-net module when using the
   `CAF_MAIN` macro. This fixes the `WSANOTINITIALISED` error on Windows (#1409).
+- The WebSocket implementation now properly re-assembles fragmented frames.
+  Previously, a bug in the framing protocol implementation caused CAF to sever
+  the connection when encountering continuation frames (#1417).
+
+### Added
+
+- Add new utilities in `caf::chrono` for making it easier to handle ISO 8601
+  timestamps. The new function `std::chrono::to_string` converts system time to
+  an ISO timestamp. For reading an ISO timestamp, CAF now provides the class
+  `caf::chrono::datetime`. It can parse ISO-formatted strings via `parse` (or
+  `datetime::from_string`) and convert them to a local representation via
+  `to_local_time`. Please refer to the class documentation for more details.
 
 ## [0.19.1] - 2023-05-01
 
@@ -631,9 +698,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   already did.
 - The `typed_actor_view` decorator lacked several member functions such as
   `link_to`, `send_exit`, etc. These are now available.
-- Constructing a `typed_actor` handle from a pointer view failed du to a missing
-  constructor overload. This (explicit) overload now exists and the conversion
-  should work as expected.
+- Constructing a `typed_actor` handle from a pointer view failed due to a
+  missing constructor overload. This (explicit) overload now exists and the
+  conversion should work as expected.
 - Sending floating points to remote actors changed `infinity` and `NaN` to
   garbage values (#1107). The fixed packing / unpacking routines for IEEE 754
   values keep these non-numeric values intact now. It is worth mentioning that
@@ -985,7 +1052,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.1...master
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.2...master
+[0.19.2]: https://github.com/actor-framework/actor-framework/releases/0.19.2
 [0.19.1]: https://github.com/actor-framework/actor-framework/releases/0.19.1
 [0.19.0]: https://github.com/actor-framework/actor-framework/releases/0.19.0
 [0.19.0-rc.1]: https://github.com/actor-framework/actor-framework/releases/0.19.0-rc.1

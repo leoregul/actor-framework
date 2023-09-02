@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <vector>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/intrusive_ptr.hpp"
+
+#include <vector>
 
 namespace caf {
 
@@ -68,6 +68,9 @@ public:
   /// is disposed if all of its elements are disposed. Disposing the composite
   /// disposes all elements individually.
   static disposable make_composite(std::vector<disposable> entries);
+
+  /// Creates a disposable that simply represents a flag.
+  static disposable make_flag();
 
   // -- mutators ---------------------------------------------------------------
 

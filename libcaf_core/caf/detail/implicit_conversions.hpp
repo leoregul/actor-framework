@@ -4,20 +4,20 @@
 
 #pragma once
 
-#include <string>
-#include <type_traits>
-
 #include "caf/actor_traits.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/type_id.hpp"
 
+#include <string>
+#include <type_traits>
+
 namespace caf::detail {
 
 template <class T,
-          bool IsDyn = std::is_base_of<dynamically_typed_actor_base, T>::value,
-          bool IsStat = std::is_base_of<statically_typed_actor_base, T>::value>
+          bool IsDyn = std::is_base_of_v<dynamically_typed_actor_base, T>,
+          bool IsStat = std::is_base_of_v<statically_typed_actor_base, T>>
 struct implicit_actor_conversions {
   using type = T;
 };
@@ -29,8 +29,7 @@ struct implicit_actor_conversions<T, true, false> {
 
 template <class T>
 struct implicit_actor_conversions<T, false, true> {
-  using type =
-    typename detail::tl_apply<typename T::signatures, typed_actor>::type;
+  using type = detail::tl_apply_t<typename T::signatures, typed_actor>;
 };
 
 template <>
@@ -40,7 +39,7 @@ struct implicit_actor_conversions<actor_control_block, false, false> {
 
 template <class T>
 struct implicit_conversions {
-  using type = std::conditional_t<std::is_convertible<T, error>::value, error,
+  using type = std::conditional_t<std::is_convertible_v<T, error>, error,
                                   squash_if_int_t<T>>;
 };
 
@@ -49,6 +48,11 @@ struct implicit_conversions<T*> : implicit_actor_conversions<T> {};
 
 template <>
 struct implicit_conversions<char*> {
+  using type = std::string;
+};
+
+template <>
+struct implicit_conversions<std::string_view> {
   using type = std::string;
 };
 

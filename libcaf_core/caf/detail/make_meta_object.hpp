@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <algorithm>
-#include <cstddef>
-
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -17,6 +14,9 @@
 #include "caf/inspector_access.hpp"
 #include "caf/serializer.hpp"
 #include "caf/type_id.hpp"
+
+#include <algorithm>
+#include <cstddef>
 
 namespace caf::detail::default_function {
 
@@ -56,7 +56,7 @@ bool load(deserializer& source, void* ptr) {
 }
 
 template <class T>
-void stringify(std::string& buf, const void* ptr) {
+void stringify(std::string& buf, [[maybe_unused]] const void* ptr) {
   if constexpr (is_allowed_unsafe_message_type_v<T>) {
     auto tn = type_name_v<T>;
     buf.insert(buf.end(), tn.begin(), tn.end());

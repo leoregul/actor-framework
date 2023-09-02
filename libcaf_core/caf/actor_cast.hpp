@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/fwd.hpp"
+
+#include <type_traits>
 
 namespace caf {
 
@@ -48,6 +48,10 @@ struct is_weak_ptr {
   static constexpr bool value = T::has_weak_ptr_semantics;
 };
 
+/// Convenience alias for `is_weak_ptr<T>::value`.
+template <class T>
+inline constexpr bool is_weak_ptr_v = is_weak_ptr<T>::value;
+
 template <class T>
 struct is_weak_ptr<T*> : std::false_type {};
 
@@ -70,8 +74,7 @@ public:
     return x->ctrl();
   }
 
-  template <class T,
-            class = typename std::enable_if<!std::is_pointer<T>::value>::type>
+  template <class T, class = std::enable_if_t<!std::is_pointer_v<T>>>
   To operator()(const T& x) const {
     return x.get();
   }
@@ -88,8 +91,7 @@ public:
     return static_cast<To*>(x);
   }
 
-  template <class T,
-            class = typename std::enable_if<!std::is_pointer<T>::value>::type>
+  template <class T, class = std::enable_if_t<!std::is_pointer_v<T>>>
   To* operator()(const T& x) const {
     return (*this)(x.get());
   }
@@ -106,8 +108,7 @@ public:
     return x->ctrl();
   }
 
-  template <class T,
-            class = typename std::enable_if<!std::is_pointer<T>::value>::type>
+  template <class T, class = std::enable_if_t<!std::is_pointer_v<T>>>
   actor_control_block* operator()(const T& x) const {
     return x.get();
   }
@@ -145,14 +146,14 @@ public:
 /// handle or raw pointer of type `T`.
 template <class T, class U>
 T actor_cast(U&& what) {
-  using from_type =
-    typename std::remove_const<typename std::remove_reference<U>::type>::type;
+  // Should use remove_cvref in C++20.
+  using from_type = std::remove_const_t<std::remove_reference_t<U>>;
   // query traits for T
-  constexpr bool to_raw = std::is_pointer<T>::value;
-  constexpr bool to_weak = is_weak_ptr<T>::value;
+  constexpr bool to_raw = std::is_pointer_v<T>;
+  constexpr bool to_weak = is_weak_ptr_v<T>;
   // query traits for U
-  constexpr bool from_raw = std::is_pointer<from_type>::value;
-  constexpr bool from_weak = is_weak_ptr<from_type>::value;
+  constexpr bool from_raw = std::is_pointer_v<from_type>;
+  constexpr bool from_weak = is_weak_ptr_v<from_type>;
   // calculate x and y
   constexpr int x = to_raw ? 0 : (to_weak ? 2 : 1);
   constexpr int y = from_raw ? 0 : (from_weak ? 3 : 6);

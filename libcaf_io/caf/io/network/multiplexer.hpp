@@ -4,22 +4,23 @@
 
 #pragma once
 
-#include <functional>
-#include <string>
-#include <thread>
-
-#include "caf/detail/io_export.hpp"
-#include "caf/execution_unit.hpp"
-#include "caf/expected.hpp"
-#include "caf/extend.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/protocol.hpp"
+
+#include "caf/detail/io_export.hpp"
+#include "caf/execution_unit.hpp"
+#include "caf/expected.hpp"
+#include "caf/extend.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/resumable.hpp"
+
+#include <functional>
+#include <string>
+#include <thread>
 
 namespace caf::io::network {
 
@@ -97,7 +98,7 @@ public:
   /// Creates an instance using the networking backend compiled with CAF.
   static std::unique_ptr<multiplexer> make(actor_system& sys);
 
-  /// Exectutes all pending events without blocking.
+  /// Executes all pending events without blocking.
   /// @returns `true` if at least one event was called, `false` otherwise.
   virtual bool try_run_once() = 0;
 

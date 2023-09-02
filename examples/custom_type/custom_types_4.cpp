@@ -1,11 +1,11 @@
 // Showcases custom message types with a sealed class hierarchy.
 
+#include "caf/all.hpp"
+
 #include <cassert>
 #include <iostream>
 #include <memory>
 #include <utility>
-
-#include "caf/all.hpp"
 
 class circle;
 class shape;
@@ -172,8 +172,8 @@ struct variant_inspector_traits<shape_ptr> {
 
   // Assigns a value to x.
   template <class U>
-  static void assign(value_type& x, U value) {
-    if constexpr (std::is_same<U, none_t>::value)
+  static void assign(value_type& x, [[maybe_unused]] U value) {
+    if constexpr (std::is_same_v<U, none_t>)
       x.reset();
     else
       x = std::make_shared<U>(std::move(value));

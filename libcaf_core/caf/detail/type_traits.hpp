@@ -4,6 +4,13 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+#include "caf/detail/is_complete.hpp"
+#include "caf/detail/is_one_of.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/fwd.hpp"
+#include "caf/timestamp.hpp"
+
 #include <array>
 #include <chrono>
 #include <functional>
@@ -13,12 +20,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-#include "caf/detail/is_complete.hpp"
-#include "caf/detail/is_one_of.hpp"
-#include "caf/detail/type_list.hpp"
-#include "caf/fwd.hpp"
-#include "caf/timestamp.hpp"
 
 #define CAF_HAS_MEMBER_TRAIT(name)                                             \
   template <class T>                                                           \
@@ -34,7 +35,9 @@
                                                                                \
   public:                                                                      \
     static constexpr bool value = sfinae_type::value;                          \
-  }
+  };                                                                           \
+  template <class T>                                                           \
+  constexpr bool has_##name##_member_v = has_##name##_member<T>::value
 
 #define CAF_HAS_ALIAS_TRAIT(name)                                              \
   template <class T>                                                           \
@@ -57,24 +60,7 @@ namespace caf::detail {
 template <class T>
 constexpr T* null_v = nullptr;
 
-// -- backport of C++14 additions ----------------------------------------------
-
-template <class T>
-using decay_t = typename std::decay<T>::type;
-
-template <bool B, class T, class F>
-using conditional_t = typename std::conditional<B, T, F>::type;
-
-template <bool V, class T = void>
-using enable_if_t = typename std::enable_if<V, T>::type;
-
 // -- custom traits ------------------------------------------------------------
-
-template <class Trait, class T = void>
-using enable_if_tt = typename std::enable_if<Trait::value, T>::type;
-
-template <class T>
-using remove_reference_t = typename std::remove_reference<T>::type;
 
 /// Checks whether `T` defines a free function `to_string`.
 template <class T>
@@ -88,42 +74,19 @@ private:
   using result = decltype(sfinae(std::declval<const T&>()));
 
 public:
-  static constexpr bool value = std::is_convertible<result, std::string>::value;
+  static constexpr bool value = std::is_convertible_v<result, std::string>;
 };
+
+/// Convenience alias for `has_to_string<T>::value`.
+/// @relates has_to_string
+template <class T>
+inline constexpr bool has_to_string_v = has_to_string<T>::value;
 
 template <bool X>
 using bool_token = std::integral_constant<bool, X>;
 
 template <int X>
 using int_token = std::integral_constant<int, X>;
-
-/// Joins all bool constants using operator &&.
-template <bool... BoolConstants>
-struct conjunction;
-
-template <>
-struct conjunction<> {
-  static constexpr bool value = true;
-};
-
-template <bool X, bool... Xs>
-struct conjunction<X, Xs...> {
-  static constexpr bool value = X && conjunction<Xs...>::value;
-};
-
-/// Joins all bool constants using operator ||.
-template <bool... BoolConstants>
-struct disjunction;
-
-template <>
-struct disjunction<> {
-  static constexpr bool value = false;
-};
-
-template <bool X, bool... Xs>
-struct disjunction<X, Xs...> {
-  static constexpr bool value = X || disjunction<Xs...>::value;
-};
 
 /// Checks whether `T` is a `std::chrono::duration`.
 template <class T>
@@ -136,10 +99,10 @@ struct is_duration<std::chrono::duration<Period, Rep>> : std::true_type {};
 /// convertible to one of STL's string types.
 template <class T>
 struct is_primitive {
-  static constexpr bool value = std::is_convertible<T, std::string>::value
-                                || std::is_convertible<T, std::u16string>::value
-                                || std::is_convertible<T, std::u32string>::value
-                                || std::is_arithmetic<T>::value;
+  static constexpr bool value = std::is_convertible_v<T, std::string>
+                                || std::is_convertible_v<T, std::u16string>
+                                || std::is_convertible_v<T, std::u32string>
+                                || std::is_arithmetic_v<T>;
 };
 
 /// Checks whether `T1` is comparable with `T2`.
@@ -166,14 +129,17 @@ class is_comparable {
   static void cmp_help_fun(const A*, const B*, void*, C);
 
   using result_type = decltype(cmp_help_fun(
-    static_cast<T1*>(nullptr), static_cast<T2*>(nullptr),
-    static_cast<bool*>(nullptr),
-    std::integral_constant<bool, std::is_arithmetic<T1>::value
-                                   && std::is_arithmetic<T2>::value>{}));
+    null_v<T1>, null_v<T2>, null_v<bool>,
+    std::integral_constant<bool, std::is_arithmetic_v<T1>
+                                   && std::is_arithmetic_v<T2>>{}));
 
 public:
-  static constexpr bool value = std::is_same<bool, result_type>::value;
+  static constexpr bool value = std::is_same_v<bool, result_type>;
 };
+
+/// Convenience alias for `is_comparable<T1, T2>::value`.
+template <class T1, class T2>
+inline constexpr bool is_comparable_v = is_comparable<T1, T2>::value;
 
 /// Checks whether `T` behaves like a forward iterator.
 template <class T>
@@ -181,21 +147,25 @@ class is_forward_iterator {
   template <class C>
   static bool sfinae(C& x, C& y,
                      // check for operator*
-                     decay_t<decltype(*x)>* = nullptr,
+                     std::decay_t<decltype(*x)>* = nullptr,
                      // check for operator++ returning an iterator
-                     decay_t<decltype(x = ++y)>* = nullptr,
+                     std::decay_t<decltype(x = ++y)>* = nullptr,
                      // check for operator==
-                     decay_t<decltype(x == y)>* = nullptr,
+                     std::decay_t<decltype(x == y)>* = nullptr,
                      // check for operator!=
-                     decay_t<decltype(x != y)>* = nullptr);
+                     std::decay_t<decltype(x != y)>* = nullptr);
 
   static void sfinae(...);
 
   using result_type = decltype(sfinae(std::declval<T&>(), std::declval<T&>()));
 
 public:
-  static constexpr bool value = std::is_same<bool, result_type>::value;
+  static constexpr bool value = std::is_same_v<bool, result_type>;
 };
+
+/// Convenience alias for `is_forward_iterator<T>::value`.
+template <class T>
+inline constexpr bool is_forward_iterator_v = is_forward_iterator<T>::value;
 
 /// Checks whether `T` has `begin()` and `end()` member
 /// functions returning forward iterators.
@@ -203,21 +173,21 @@ template <class T>
 class is_iterable {
   // this horrible code would just disappear if we had concepts
   template <class C>
-  static bool
-  sfinae(C* cc,
-         // check if 'C::begin()' returns a forward iterator
-         enable_if_tt<is_forward_iterator<decltype(cc->begin())>>* = nullptr,
-         // check if begin() and end() both exist and are comparable
-         decltype(cc->begin() != cc->end())* = nullptr);
+  static bool sfinae(
+    C* cc,
+    // check if 'C::begin()' returns a forward iterator
+    std::enable_if_t<is_forward_iterator_v<decltype(cc->begin())>>* = nullptr,
+    // check if begin() and end() both exist and are comparable
+    decltype(cc->begin() != cc->end())* = nullptr);
 
   // SFNINAE default
   static void sfinae(void*);
 
-  using result_type = decltype(sfinae(static_cast<decay_t<T>*>(nullptr)));
+  using result_type = decltype(sfinae(null_v<std::decay_t<T>>));
 
 public:
   static constexpr bool value = is_primitive<T>::value == false
-                                && std::is_same<bool, result_type>::value;
+                                && std::is_same_v<bool, result_type>;
 };
 
 template <class T>
@@ -315,10 +285,9 @@ struct has_apply_operator {
 
 // matches (IsFun || IsMemberFun)
 template <class T,
-          bool IsFun
-          = std::is_function<T>::value
-            || std::is_function<typename std::remove_pointer<T>::type>::value
-            || std::is_member_function_pointer<T>::value,
+          bool IsFun = std::is_function_v<T>
+                       || std::is_function_v<std::remove_pointer_t<T>>
+                       || std::is_member_function_pointer_v<T>,
           bool HasApplyOp = has_apply_operator<T>::value>
 struct get_callable_trait_helper {
   using type = callable_trait<T>;
@@ -347,38 +316,29 @@ struct get_callable_trait_helper<T, false, false> {};
 /// i.e., a function, member function, or a class providing
 /// the call operator.
 template <class T>
-struct get_callable_trait : get_callable_trait_helper<decay_t<T>> {};
+struct get_callable_trait : get_callable_trait_helper<std::decay_t<T>> {};
 
 template <class T>
 using get_callable_trait_t = typename get_callable_trait<T>::type;
 
-/// Checks whether `T` is a function or member function.
+/// Checks whether `T` is a function, function object or member function.
 template <class T>
 struct is_callable {
   template <class C>
-  static bool _fun(C*, typename get_callable_trait<C>::type* = nullptr);
+  static bool _fun(C*, get_callable_trait_t<C>* = nullptr);
 
   static void _fun(void*);
 
-  using result_type = decltype(_fun(static_cast<decay_t<T>*>(nullptr)));
+  using result_type = decltype(_fun(null_v<std::decay_t<T>>));
 
 public:
-  static constexpr bool value = std::is_same<bool, result_type>::value;
+  static constexpr bool value = std::is_same_v<bool, result_type>;
 };
 
-/// Checks whether `F` is callable with arguments of types `Ts...`.
-template <class F, class... Ts>
-struct is_callable_with {
-  template <class U>
-  static auto sfinae(U*)
-    -> decltype((std::declval<U&>())(std::declval<Ts>()...), std::true_type());
-
-  template <class U>
-  static auto sfinae(...) -> std::false_type;
-
-  using type = decltype(sfinae<F>(nullptr));
-  static constexpr bool value = type::value;
-};
+/// Convenience alias for `is_callable<T>::value`.
+/// @relates is_callable
+template <class T>
+inline constexpr bool is_callable_v = is_callable<T>::value;
 
 /// Checks whether `F` takes mutable references.
 ///
@@ -406,7 +366,7 @@ struct type_at<0, T0, Ts...> {
 };
 
 // Checks whether T has a member variable named `name`.
-template <class T, bool IsScalar = std::is_scalar<T>::value>
+template <class T, bool IsScalar = std::is_scalar_v<T>>
 class has_name {
 private:
   // a simple struct with a member called `name`
@@ -427,26 +387,13 @@ private:
   static int fun(void*);
 
 public:
-  static constexpr bool value = sizeof(fun(static_cast<derived*>(nullptr))) > 1;
+  static constexpr bool value = sizeof(fun(null_v<derived>)) > 1;
 };
 
 template <class T>
 class has_name<T, true> {
 public:
   static constexpr bool value = false;
-};
-
-template <class T>
-class has_peek_all {
-private:
-  template <class U>
-  static int
-  fun(const U*, decltype(std::declval<U&>().peek_all(unit))* = nullptr);
-
-  static char fun(const void*);
-
-public:
-  static constexpr bool value = sizeof(fun(static_cast<T*>(nullptr))) > 1;
 };
 
 CAF_HAS_MEMBER_TRAIT(clear);
@@ -459,9 +406,13 @@ CAF_HAS_MEMBER_TRAIT(size);
 template <class F, class T>
 struct is_handler_for {
   static constexpr bool value
-    = std::is_convertible<F, std::function<void(T&)>>::value
-      || std::is_convertible<F, std::function<void(const T&)>>::value;
+    = std::is_convertible_v<F, std::function<void(T&)>>
+      || std::is_convertible_v<F, std::function<void(const T&)>>;
 };
+
+/// Convenience alias for `is_handler_for<F, T>::value`.
+template <class F, class T>
+inline constexpr bool is_handler_for_v = is_handler_for<F, T>::value;
 
 template <class T>
 struct value_type_of {
@@ -476,12 +427,8 @@ struct value_type_of<T*> {
 template <class T>
 using value_type_of_t = typename value_type_of<T>::type;
 
-template <class T>
-using is_callable_t = typename std::enable_if<is_callable<T>::value>::type;
-
 template <class F, class T>
-using is_handler_for_ef =
-  typename std::enable_if<is_handler_for<F, T>::value>::type;
+using is_handler_for_ef = typename std::enable_if<is_handler_for_v<F, T>>::type;
 
 template <class T>
 struct strip_reference_wrapper {
@@ -508,7 +455,7 @@ constexpr bool can_insert_elements_impl(void*) {
 
 template <class T>
 constexpr bool can_insert_elements() {
-  return can_insert_elements_impl<T>(static_cast<T*>(nullptr));
+  return can_insert_elements_impl<T>(null_v<T>);
 }
 
 /// Checks whether `Tpl` is a specialization of `T` or not.
@@ -550,15 +497,14 @@ constexpr bool is_expected_v = is_expected<T>::value;
 // Checks whether `T` and `U` are integers of the same size and signedness.
 // clang-format off
 template <class T, class U,
-          bool Enable = std::is_integral<T>::value
-                        && std::is_integral<U>::value
-                        && !std::is_same<T, bool>::value
-                        && !std::is_same<U, bool>::value>
+          bool Enable = std::is_integral_v<T>
+                        && std::is_integral_v<U>
+                        && !std::is_same_v<T, bool>
+                        && !std::is_same_v<U, bool>>
 // clang-format on
 struct is_equal_int_type {
   static constexpr bool value = sizeof(T) == sizeof(U)
-                                && std::is_signed<T>::value
-                                     == std::is_signed<U>::value;
+                                && std::is_signed_v<T> == std::is_signed_v<U>;
 };
 
 template <class T, typename U>
@@ -569,7 +515,7 @@ struct is_equal_int_type<T, U, false> : std::false_type {};
 /// same size and signedness. This works around the issue that
 /// `uint8_t != unsigned char on some compilers.
 template <class T, typename U>
-struct is_same_ish : std::conditional<std::is_same<T, U>::value, std::true_type,
+struct is_same_ish : std::conditional<std::is_same_v<T, U>, std::true_type,
                                       is_equal_int_type<T, U>>::type {};
 
 /// Utility for fallbacks calling `static_assert`.
@@ -612,19 +558,6 @@ CAF_HAS_ALIAS_TRAIT(key_type);
 CAF_HAS_ALIAS_TRAIT(mapped_type);
 
 // -- constexpr functions for use in enable_if & friends -----------------------
-
-template <class List1, class List2>
-struct all_constructible : std::false_type {};
-
-template <>
-struct all_constructible<type_list<>, type_list<>> : std::true_type {};
-
-template <class T, class... Ts, class U, class... Us>
-struct all_constructible<type_list<T, Ts...>, type_list<U, Us...>> {
-  static constexpr bool value
-    = std::is_constructible<T, U>::value
-      && all_constructible<type_list<Ts...>, type_list<Us...>>::value;
-};
 
 /// Checks whether T behaves like `std::map`.
 template <class T>
@@ -782,44 +715,13 @@ struct is_list_like {
 template <class T>
 constexpr bool is_list_like_v = is_list_like<T>::value;
 
-template <class F, class... Ts>
-struct is_invocable {
-private:
-  template <class U>
-  static auto sfinae(U* f)
-    -> decltype((*f)(std::declval<Ts>()...), std::true_type());
-
-  template <class U>
-  static auto sfinae(...) -> std::false_type;
-
-  using sfinae_type = decltype(sfinae<F>(nullptr));
-
-public:
-  static constexpr bool value = sfinae_type::value;
-};
-
-template <class R, class F, class... Ts>
-struct is_invocable_r {
-private:
-  template <class U>
-  static auto sfinae(U* f)
-    -> std::is_same<R, decltype((*f)(std::declval<Ts>()...))>;
-
-  template <class U>
-  static auto sfinae(...) -> std::false_type;
-
-  using sfinae_type = decltype(sfinae<F>(nullptr));
-
-public:
-  static constexpr bool value = sfinae_type::value;
-};
-
 template <class T, class To>
 class has_convertible_data_member {
 private:
   template <class U>
-  static auto sfinae(U* x) -> std::integral_constant<
-    bool, std::is_convertible<decltype(x->data()), To*>::value>;
+  static auto sfinae(U* x)
+    -> std::integral_constant<bool,
+                              std::is_convertible_v<decltype(x->data()), To*>>;
 
   template <class U>
   static auto sfinae(...) -> std::false_type;
@@ -830,23 +732,10 @@ public:
   static constexpr bool value = sfinae_type::value;
 };
 
-template <class T, class Arg>
-struct can_apply {
-  template <class U>
-  static auto sfinae(U* x)
-    -> decltype(CAF_IGNORE_UNUSED(x->apply(std::declval<Arg>())),
-                std::true_type{});
-
-  template <class U>
-  static auto sfinae(...) -> std::false_type;
-
-  using type = decltype(sfinae<T>(nullptr));
-
-  static constexpr bool value = type::value;
-};
-
-template <class T, class Arg>
-constexpr bool can_apply_v = can_apply<T, Arg>::value;
+/// Convenience alias for `has_convertible_data_member<T, To>::value`.
+template <class T, class To>
+inline constexpr bool has_convertible_data_member_v
+  = has_convertible_data_member<T, To>::value;
 
 /// Evaluates to `true` for all types that specialize `std::tuple_size`, i.e.,
 /// `std::tuple`, `std::pair`, and `std::array`.
@@ -878,8 +767,7 @@ private:
   using result_type = decltype(sfinae(std::declval<Inspector&>()));
 
 public:
-  static constexpr bool value
-    = std::is_same<result_type, execution_unit*>::value;
+  static constexpr bool value = std::is_same_v<result_type, execution_unit*>;
 };
 
 /// Checks whether `T` provides an `inspect` overload for `Inspector`.
@@ -899,6 +787,11 @@ public:
   static constexpr bool value = result_type::value;
 };
 
+/// Convenience alias for `has_inspect_overload<Inspector, T>::value`.
+template <class Inspector, class T>
+inline constexpr bool has_inspect_overload_v
+  = has_inspect_overload<Inspector, T>::value;
+
 /// Checks whether the inspector has a `builtin_inspect` overload for `T`.
 template <class Inspector, class T>
 class has_builtin_inspect {
@@ -917,6 +810,11 @@ public:
   static constexpr bool value = sfinae_result::value;
 };
 
+/// Convenience alias for `has_builtin_inspect<Inspector, T>::value`.
+template <class Inspector, class T>
+inline constexpr bool has_builtin_inspect_v
+  = has_builtin_inspect<Inspector, T>::value;
+
 /// Checks whether inspectors are required to provide a `value` overload for T.
 template <bool IsLoading, class T>
 struct is_trivial_inspector_value;
@@ -928,7 +826,7 @@ struct is_trivial_inspector_value<true, T> {
 
 template <class T>
 struct is_trivial_inspector_value<false, T> {
-  static constexpr bool value = std::is_convertible<T, std::string_view>::value;
+  static constexpr bool value = std::is_convertible_v<T, std::string_view>;
 };
 
 #define CAF_ADD_TRIVIAL_LOAD_INSPECTOR_VALUE(type)                             \
@@ -984,11 +882,16 @@ public:
   static constexpr bool value = sfinae_result::value;
 };
 
+/// Convenience alias for `accepts_opaque_value<Inspector, T>::value`.
+template <class Inspector, class T>
+inline constexpr bool accepts_opaque_value_v
+  = accepts_opaque_value<Inspector, T>::value;
+
 /// Checks whether `T` is primitive, i.e., either an arithmetic type or
 /// convertible to one of STL's string types.
 template <class T, bool IsLoading>
 struct is_builtin_inspector_type {
-  static constexpr bool value = std::is_arithmetic<T>::value;
+  static constexpr bool value = std::is_arithmetic_v<T>;
 };
 
 template <bool IsLoading>
@@ -1063,8 +966,17 @@ constexpr bool is_64bit_integer_v = std::is_same_v<T, int64_t>
 /// Checks whether `T` has a static member function called `init_host_system`.
 template <class T>
 struct has_init_host_system {
+// GNU g++ 8.5.0 (almalinux-8) has a known bug where [[nodiscard] values are
+// reported as warnings, even in unevaluated context.
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=89070
+#if !defined(__clang__) && defined(__GNUC__)
+  CAF_PUSH_UNUSED_RESULT_WARNING
+#endif
   template <class U>
   static auto sfinae(U*) -> decltype(U::init_host_system(), std::true_type());
+#if !defined(__clang__) && defined(__GNUC__)
+  CAF_POP_WARNINGS
+#endif
 
   template <class U>
   static auto sfinae(...) -> std::false_type;

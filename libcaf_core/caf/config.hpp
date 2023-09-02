@@ -22,7 +22,7 @@
 /// Denotes version of CAF in the format {MAJOR}{MINOR}{PATCH},
 /// whereas each number is a two-digit decimal number without
 /// leading zeros (e.g. 900 is version 0.9.0).
-#define CAF_VERSION 1901
+#define CAF_VERSION 1902
 
 /// Defined to the major version number of CAF.
 #define CAF_MAJOR_VERSION (CAF_VERSION / 10000)
@@ -89,6 +89,9 @@
 #  define CAF_PUSH_DEPRECATED_WARNING                                          \
     _Pragma("clang diagnostic push")                                           \
     _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
+#  define CAF_PUSH_UNUSED_RESULT_WARNING                                       \
+    _Pragma("clang diagnostic push")                                           \
+    _Pragma("clang diagnostic ignored \"-Wunused-result\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("clang diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH [[clang::fallthrough]]
@@ -118,6 +121,9 @@
 #  define CAF_PUSH_DEPRECATED_WARNING                                          \
     _Pragma("GCC diagnostic push")                                             \
     _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#  define CAF_PUSH_UNUSED_RESULT_WARNING                                       \
+    _Pragma("GCC diagnostic push")                                           \
+    _Pragma("GCC diagnostic ignored \"-Wunused-result\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("GCC diagnostic pop")
 #  if __GNUC__ >= 7
@@ -222,7 +228,7 @@ struct IUnknown;
 // Optionally enable CAF_ASSERT
 #ifndef CAF_ENABLE_RUNTIME_CHECKS
 #  define CAF_ASSERT(unused) static_cast<void>(0)
-#elif defined(CAF_WINDOWS) || defined(CAF_BSD)
+#elif defined(CAF_WINDOWS) || defined(CAF_BSD) || !__has_include(<execinfo.h>)
 #  define CAF_ASSERT(stmt)                                                     \
     if (static_cast<bool>(stmt) == false) {                                    \
       printf("%s:%u: requirement failed '%s'\n", __FILE__, __LINE__, #stmt);   \

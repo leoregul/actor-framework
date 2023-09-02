@@ -16,7 +16,13 @@ template <class>
 class do_on_next;
 
 template <class>
+class element_at;
+
+template <class>
 class filter;
+
+template <class>
+class ignore_elements;
 
 template <class>
 class map;
@@ -31,7 +37,13 @@ template <class>
 class skip;
 
 template <class>
+class skip_last;
+
+template <class>
 class take;
+
+template <class>
+class take_last;
 
 template <class>
 class take_while;

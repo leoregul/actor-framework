@@ -9,6 +9,10 @@
 // Run client at the same host:
 // - distributed_calculator -c -p 4242
 
+#include "caf/io/all.hpp"
+
+#include "caf/all.hpp"
+
 #include <array>
 #include <cassert>
 #include <functional>
@@ -16,9 +20,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include "caf/all.hpp"
-#include "caf/io/all.hpp"
 
 using std::cerr;
 using std::cout;
@@ -155,7 +156,7 @@ behavior running(stateful_actor<state>* self, const actor& calculator) {
       .then(
         [=](int result) {
           const char* op_str;
-          if constexpr (std::is_same<add_atom, decltype(op)>::value)
+          if constexpr (std::is_same_v<add_atom, decltype(op)>)
             op_str = " + ";
           else
             op_str = " - ";

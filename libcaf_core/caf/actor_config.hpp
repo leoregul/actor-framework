@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <string>
-
 #include "caf/abstract_channel.hpp"
 #include "caf/behavior.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/fwd.hpp"
 #include "caf/input_range.hpp"
+
+#include <string>
 
 namespace caf {
 
@@ -34,6 +34,7 @@ public:
   int flags;
   input_range<const group>* groups;
   detail::unique_function<behavior(local_actor*)> init_fun;
+  detail::mailbox_factory* mbox_factory = nullptr;
 
   // -- properties -------------------------------------------------------------
 

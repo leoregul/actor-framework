@@ -8,14 +8,14 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <type_traits>
-
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/is_error_code_enum.hpp"
+
+#include <cstdint>
+#include <string>
+#include <type_traits>
 
 namespace caf {
 
@@ -105,8 +105,8 @@ enum class sec : uint8_t {
   incompatible_versions,
   /// Connection refused because of incompatible application IDs.
   incompatible_application_ids,
-  /// The middleman received a malformed BASP message from another node.
-  malformed_basp_message,
+  /// Received a malformed message from another node.
+  malformed_message,
   /// The middleman closed a connection because it failed to serialize or
   /// deserialize a payload.
   serializing_basp_payload_failed = 50,

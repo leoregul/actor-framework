@@ -10,31 +10,25 @@
 #  include <exception>
 #endif // CAF_ENABLE_EXCEPTIONS
 
-#include <forward_list>
-#include <map>
-#include <type_traits>
-#include <unordered_map>
-
+#include "caf/abstract_mailbox.hpp"
 #include "caf/action.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/async/fwd.hpp"
 #include "caf/cow_string.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/default_mailbox.hpp"
 #include "caf/detail/stream_bridge.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/extend.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
-#include "caf/flow/item_publisher.hpp"
+#include "caf/flow/item_publisher.hpp" // deprecated
+#include "caf/flow/multicaster.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/fwd.hpp"
-#include "caf/intrusive/drr_cached_queue.hpp"
-#include "caf/intrusive/drr_queue.hpp"
-#include "caf/intrusive/fifo_inbox.hpp"
-#include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
-#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
+#include "caf/intrusive/stack.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
@@ -43,13 +37,15 @@
 #include "caf/mixin/sender.hpp"
 #include "caf/no_stages.hpp"
 #include "caf/policy/arg.hpp"
-#include "caf/policy/categorized.hpp"
-#include "caf/policy/normal_messages.hpp"
-#include "caf/policy/urgent_messages.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/sec.hpp"
 #include "caf/telemetry/timer.hpp"
 #include "caf/unordered_flat_map.hpp"
+
+#include <forward_list>
+#include <map>
+#include <type_traits>
+#include <unordered_map>
 
 namespace caf {
 
@@ -117,39 +113,12 @@ public:
   /// Base type.
   using super = local_actor;
 
-  /// Stores asynchronous messages with default priority.
-  using normal_queue = intrusive::drr_cached_queue<policy::normal_messages>;
-
-  /// Stores asynchronous messages with hifh priority.
-  using urgent_queue = intrusive::drr_cached_queue<policy::urgent_messages>;
-
-  /// Configures the FIFO inbox with two nested queues. One for high-priority
-  /// and one for normal priority messages.
-  struct mailbox_policy {
-    using deficit_type = size_t;
-
-    using mapped_type = mailbox_element;
-
-    using unique_pointer = mailbox_element_ptr;
-
-    using queue_type
-      = intrusive::wdrr_fixed_multiplexed_queue<policy::categorized,
-                                                urgent_queue, normal_queue>;
-  };
-
   using batch_op_ptr = intrusive_ptr<flow::op::base<async::batch>>;
 
   struct stream_source_state {
     batch_op_ptr obs;
     size_t max_items_per_batch;
   };
-
-  static constexpr size_t urgent_queue_index = 0;
-
-  static constexpr size_t normal_queue_index = 1;
-
-  /// A queue optimized for single-reader-many-writers.
-  using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
   /// The message ID of an outstanding response with its callback.
   using pending_response = std::pair<const message_id, behavior>;
@@ -177,7 +146,7 @@ public:
   using exception_handler = std::function<error(pointer, std::exception_ptr&)>;
 #endif // CAF_ENABLE_EXCEPTIONS
 
-  using batch_publisher = flow::item_publisher<async::batch>;
+  using batch_publisher = flow::multicaster<async::batch>;
 
   class batch_forwarder : public ref_counted {
   public:
@@ -268,8 +237,13 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the queue for storing incoming messages.
-  mailbox_type& mailbox() noexcept {
-    return mailbox_;
+  abstract_mailbox& mailbox() noexcept {
+    return *mailbox_;
+  }
+
+  /// Checks whether this actor is fully initialized.
+  bool initialized() const noexcept {
+    return getf(is_initialized_flag);
   }
 
   // -- event handlers ---------------------------------------------------------
@@ -442,12 +416,6 @@ public:
   /// Pushes `ptr` to the cache of the default queue.
   void push_to_cache(mailbox_element_ptr ptr);
 
-  /// Returns the queue of the mailbox that stores high priority messages.
-  urgent_queue& get_urgent_queue();
-
-  /// Returns the default queue of the mailbox that stores ordinary messages.
-  normal_queue& get_normal_queue();
-
   // -- caf::flow API ----------------------------------------------------------
 
   steady_time_point steady_time() override;
@@ -590,9 +558,9 @@ public:
   /// Utility function that swaps `f` into a temporary before calling it
   /// and restoring `f` only if it has not been replaced by the user.
   template <class F, class... Ts>
-  auto call_handler(F& f, Ts&&... xs) -> typename std::enable_if<
-    !std::is_same<decltype(f(std::forward<Ts>(xs)...)), void>::value,
-    decltype(f(std::forward<Ts>(xs)...))>::type {
+  auto call_handler(F& f, Ts&&... xs) -> std::enable_if_t<
+    !std::is_same_v<decltype(f(std::forward<Ts>(xs)...)), void>,
+    decltype(f(std::forward<Ts>(xs)...))> {
     using std::swap;
     F g;
     swap(f, g);
@@ -603,8 +571,8 @@ public:
   }
 
   template <class F, class... Ts>
-  auto call_handler(F& f, Ts&&... xs) -> typename std::enable_if<
-    std::is_same<decltype(f(std::forward<Ts>(xs)...)), void>::value>::type {
+  auto call_handler(F& f, Ts&&... xs) -> std::enable_if_t<
+    std::is_same_v<decltype(f(std::forward<Ts>(xs)...)), void>> {
     using std::swap;
     F g;
     swap(f, g);
@@ -721,7 +689,7 @@ protected:
   // -- member variables -------------------------------------------------------
 
   /// Stores incoming messages.
-  mailbox_type mailbox_;
+  abstract_mailbox* mailbox_;
 
   /// Stores user-defined callbacks for message handling.
   detail::behavior_stack bhvr_stack_;
@@ -761,13 +729,16 @@ protected:
 private:
   // -- utilities for instrumenting actors -------------------------------------
 
+  /// Places all messages from the `stash_` back into the mailbox.
+  void unstash();
+
   template <class F>
-  intrusive::task_result run_with_metrics(mailbox_element& x, F body) {
+  activation_result run_with_metrics(mailbox_element& x, F body) {
     if (metrics_.mailbox_time) {
       auto t0 = std::chrono::steady_clock::now();
       auto mbox_time = x.seconds_until(t0);
       auto res = body();
-      if (res != intrusive::task_result::skip) {
+      if (res != activation_result::skipped) {
         telemetry::timer::observe(metrics_.processing_time, t0);
         metrics_.mailbox_time->observe(mbox_time);
         metrics_.mailbox_size->dec();
@@ -851,6 +822,15 @@ private:
   /// This is to make sure that actor does not terminate because it thinks it's
   /// done before processing the delayed action.
   behavior delay_bhvr_;
+
+  /// Stashes skipped messages until the actor processes the next message.
+  intrusive::stack<mailbox_element> stash_;
+
+  union {
+    /// The default mailbox instance that we use if the user does not configure
+    /// a mailbox via the ::actor_config.
+    detail::default_mailbox default_mailbox_;
+  };
 };
 
 } // namespace caf

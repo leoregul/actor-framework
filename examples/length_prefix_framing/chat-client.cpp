@@ -1,11 +1,12 @@
 // Simple chat server with a binary protocol.
 
+#include "caf/net/lp/with.hpp"
+#include "caf/net/middleman.hpp"
+
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/net/lp/with.hpp"
-#include "caf/net/middleman.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"
 #include "caf/uuid.hpp"
@@ -97,8 +98,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           // blocking I/O calls.
           sys.spawn<caf::detached>([push, name] {
             auto lines = caf::async::make_blocking_producer(push);
-            if (!lines)
-              throw std::logic_error("failed to create blocking producer");
+            assert(lines);
             auto line = std::string{};
             auto prefix = name + ": ";
             while (std::getline(std::cin, line)) {

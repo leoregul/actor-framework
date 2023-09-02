@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <cstddef>
-#include <type_traits>
-#include <typeinfo>
-
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
+
+#include <cstddef>
+#include <type_traits>
+#include <typeinfo>
 
 namespace caf::detail {
 
@@ -32,6 +32,10 @@ struct strip_param<param<T>> {
   using type = T;
 };
 
+/// Convenience alias for `strip_param<T>::type`.
+template <class T>
+using strip_param_t = typename strip_param<T>::type;
+
 /// Denotes the empty list.
 using empty_type_list = type_list<>;
 
@@ -45,9 +49,9 @@ struct is_type_list<type_list<Ts...>> {
   static constexpr bool value = true;
 };
 
-// Uncomment after having switched to C++14
-// template <class T>
-// inline constexpr bool is_type_list_v = is_type_list<T>::value;
+/// Convenience alias for `is_type_list<T>::value`.
+template <class T>
+inline constexpr bool is_type_list_v = is_type_list<T>::value;
 
 // T head(type_list)
 
@@ -101,9 +105,9 @@ struct tl_size<type_list<Ts...>> {
 template <class... Ts>
 constexpr size_t tl_size<type_list<Ts...>>::value;
 
-// Uncomment after having switched to C++14
-// template <class List>
-// inline constexpr size_t tl_size_v = tl_size<List>::value;
+/// Convenience alias for `tl_size<List>::value`.
+template <class List>
+inline constexpr size_t tl_size_v = tl_size<List>::value;
 
 // T back(type_list)
 
@@ -356,9 +360,9 @@ struct tl_exists<empty_type_list, Pred> {
   static constexpr bool value = false;
 };
 
-// Uncomment after having switched to C++14
-// template <class List, template <class> class Pred>
-// inline constexpr bool tl_exists_v = tl_exists<List, Pred>::value;
+/// Convenience alias for `tl_exists<List, Pred>::value`.
+template <class List, template <class> class Pred>
+inline constexpr bool tl_exists_v = tl_exists<List, Pred>::value;
 
 // size_t count(predicate)
 
@@ -386,8 +390,7 @@ constexpr size_t tl_count<List, Pred>::value;
 /// Counts the number of elements in the list which are equal to `T`.
 template <class List, class T>
 struct tl_count_type {
-  static constexpr size_t value = (std::is_same<tl_head_t<List>, T>::value ? 1
-                                                                           : 0)
+  static constexpr size_t value = (std::is_same_v<tl_head_t<List>, T> ? 1 : 0)
                                   + tl_count_type<tl_tail_t<List>, T>::value;
 };
 
@@ -676,8 +679,8 @@ struct tl_filter_type;
 
 template <class Type, class... T>
 struct tl_filter_type<type_list<T...>, Type> {
-  using type = typename tl_filter_impl<type_list<T...>,
-                                       !std::is_same<T, Type>::value...>::type;
+  using type =
+    typename tl_filter_impl<type_list<T...>, !std::is_same_v<T, Type>...>::type;
 };
 
 template <class List, class T>
@@ -690,9 +693,8 @@ struct tl_filter_not_type;
 
 template <class Type, class... T>
 struct tl_filter_not_type<type_list<T...>, Type> {
-  using type =
-    typename tl_filter_impl<type_list<T...>,
-                            (!std::is_same<T, Type>::value)...>::type;
+  using type = typename tl_filter_impl<type_list<T...>,
+                                       (!std::is_same_v<T, Type>) ...>::type;
 };
 
 template <class List, class T>
@@ -927,9 +929,9 @@ template <class T, class... Ts, class X>
 struct tl_contains<type_list<T, Ts...>, X> : tl_contains<type_list<Ts...>, X> {
 };
 
-// Uncomment after having switched to C++14
-// template <class List, class X>
-// inline constexpr bool tl_contains_v = tl_contains<List, X>::value;
+/// Convenience alias for `tl_contains<List, X>::value`.
+template <class List, class X>
+inline constexpr bool tl_contains_v = tl_contains<List, X>::value;
 
 // subset_of(list, list)
 
@@ -946,17 +948,16 @@ template <class T, class... Ts, class List>
 struct tl_subset_of<type_list<T, Ts...>, List>
   : tl_subset_of<type_list<Ts...>, List, tl_contains<List, T>::value> {};
 
-// Uncomment after having switched to C++14
-// template <class ListA, class ListB, bool Fwd = true>
-// inline constexpr bool tl_subset_of_v = tl_subset_of<ListA, ListB,
-// Fwd>::value;
+/// Convenience alias for `tl_contains<List, X>::value`.
+template <class ListA, class ListB, bool Fwd = true>
+inline constexpr bool tl_subset_of_v = tl_subset_of<ListA, ListB, Fwd>::value;
 
 /// Tests whether ListA contains the same elements as ListB
 /// and vice versa. This comparison ignores element positions.
 template <class ListA, class ListB>
 struct tl_equal {
-  static constexpr bool value = tl_subset_of<ListA, ListB>::value
-                                && tl_subset_of<ListB, ListA>::value;
+  static constexpr bool value = tl_subset_of_v<ListA, ListB>
+                                && tl_subset_of_v<ListB, ListA>;
 };
 
 // Uncomment after having switched to C++14

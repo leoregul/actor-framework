@@ -1,0 +1,17 @@
+ignore:
+  - build
+  - examples
+  - libcaf_core/caf/decorator
+  - libcaf_core/src/decorator
+  - libcaf_core/tests
+  - libcaf_io/tests
+  - libcaf_net/tests
+  - libcaf_openssl
+  - libcaf_test
+  - tools
+  - "**/*.test.cpp"
+coverage:
+  status:
+    project:
+      default:
+        threshold: 1% # we have some fluctuation from nondeterminism alone

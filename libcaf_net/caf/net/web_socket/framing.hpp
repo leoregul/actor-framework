@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include "caf/byte.hpp"
-#include "caf/byte_span.hpp"
-#include "caf/detail/rfc6455.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/octet_stream/lower_layer.hpp"
 #include "caf/net/octet_stream/upper_layer.hpp"
@@ -14,6 +11,10 @@
 #include "caf/net/web_socket/lower_layer.hpp"
 #include "caf/net/web_socket/status.hpp"
 #include "caf/net/web_socket/upper_layer.hpp"
+
+#include "caf/byte.hpp"
+#include "caf/byte_span.hpp"
+#include "caf/detail/rfc6455.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
@@ -40,8 +41,16 @@ public:
   /// Restricts the size of received frames (including header).
   static constexpr size_t max_frame_size = INT32_MAX;
 
-  /// Stored as currently active opcode to mean "no opcode received yet".
-  static constexpr size_t nil_code = 0xFF;
+  /// Default receive policy for a new frame.
+  static constexpr auto default_receive_policy = receive_policy::up_to(2048);
+
+  // -- static utility functions -----------------------------------------------
+
+  /// Checks whether the payload of a closing frame contains a valid status
+  /// code and an UTF-8 formatted message.
+  /// @returns A default constructed `error` if the payload is valid, error kind
+  ///          otherwise.
+  static error validate_closing_payload(const_byte_span payload);
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -132,17 +141,44 @@ private:
     // nop
   }
 
-  bool handle(uint8_t opcode, byte_span payload);
+  // Validate the protocol after consuming a header.
+  error validate_header(ptrdiff_t hdr_bytes) const noexcept;
+
+  // Consume the header for the currently parsing frame. Returns the number of
+  // sonsumed bytes.
+  ptrdiff_t consume_header(byte_span input, byte_span);
+
+  // Consume the payload for the currently parsing frame. Returns the number of
+  // consumed bytes.
+  ptrdiff_t consume_payload(byte_span buffer, byte_span delta);
+
+  // Returns `frame_size` on success and -1 on error.
+  ptrdiff_t handle(uint8_t opcode, byte_span payload, size_t frame_size);
 
   void ship_pong(byte_span payload);
 
   template <class T>
   void ship_frame(std::vector<T>& buf);
 
+  // Sends closing message, can be error status, or closing handshake
+  void ship_closing_message(status code, std::string_view desc);
+
+  // Signal abort to the upper layer and shutdown to the lower layer,
+  // with closing message
+  template <class... Ts>
+  void abort_and_shutdown(sec reason, Ts&&... xs) {
+    abort_and_shutdown(make_error(reason, std::forward<Ts>(xs)...));
+  }
+
+  void abort_and_shutdown(const error& err) {
+    up_->abort(err);
+    shutdown(err);
+  }
+
   // -- member variables -------------------------------------------------------
 
   /// Points to the transport layer below.
-  octet_stream::lower_layer* down_;
+  octet_stream::lower_layer* down_ = nullptr;
 
   /// Buffer for assembling binary frames.
   binary_buffer binary_buf_;
@@ -153,11 +189,17 @@ private:
   /// A 32-bit random number generator.
   std::mt19937 rng_;
 
+  /// Header of the currently parsing frame.
+  detail::rfc6455::header hdr_;
+
   /// Caches the opcode while decoding.
-  uint8_t opcode_ = nil_code;
+  uint8_t opcode_ = detail::rfc6455::invalid_frame;
 
   /// Assembles fragmented payloads.
   binary_buffer payload_buf_;
+
+  /// Stores where to resume the UTF-8 input validation.
+  size_t validation_offset_ = 0;
 
   /// Next layer in the processing chain.
   upper_layer_ptr up_;

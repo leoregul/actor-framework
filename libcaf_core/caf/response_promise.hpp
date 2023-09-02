@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <vector>
-
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
@@ -15,6 +13,8 @@
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/response_type.hpp"
+
+#include <vector>
 
 namespace caf {
 
@@ -100,9 +100,9 @@ public:
   template <class... Ts>
   void deliver(Ts... xs) {
     using arg_types = detail::type_list<Ts...>;
-    static_assert(!detail::tl_exists<arg_types, detail::is_result>::value,
+    static_assert(!detail::tl_exists_v<arg_types, detail::is_result>,
                   "delivering a result<T> is not supported");
-    static_assert(!detail::tl_exists<arg_types, detail::is_expected>::value,
+    static_assert(!detail::tl_exists_v<arg_types, detail::is_expected>,
                   "mixing expected<T> with regular values is not supported");
     if (pending()) {
       state_->deliver_impl(make_message(std::move(xs)...));
@@ -117,8 +117,7 @@ public:
   void deliver(expected<T> x) {
     if (pending()) {
       if (x) {
-        if constexpr (std::is_same<T, void>::value
-                      || std::is_same<T, unit_t>::value)
+        if constexpr (std::is_same_v<T, void> || std::is_same_v<T, unit_t>)
           state_->deliver_impl(make_message());
         else
           state_->deliver_impl(make_message(std::move(*x)));
@@ -135,13 +134,12 @@ public:
   /// @post `pending() == false`
   template <message_priority P = message_priority::normal, class Handle = actor,
             class... Ts>
-  delegated_response_type_t<
-    typename Handle::signatures,
-    detail::implicit_conversions_t<typename std::decay<Ts>::type>...>
+  delegated_response_type_t<typename Handle::signatures,
+                            detail::implicit_conversions_t<std::decay_t<Ts>>...>
   delegate(const Handle& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "nothing to delegate");
-    using token = detail::type_list<typename detail::implicit_conversions<
-      typename std::decay<Ts>::type>::type...>;
+    using token
+      = detail::type_list<detail::implicit_conversions_t<std::decay_t<Ts>>...>;
     static_assert(response_type_unbox<signatures_of_t<Handle>, token>::valid,
                   "receiver does not accept given message");
     if (pending()) {

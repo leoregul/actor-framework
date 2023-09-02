@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <functional>
-#include <new>
-#include <utility>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/expected.hpp"
 #include "caf/response_type.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/timespan.hpp"
 #include "caf/typed_actor.hpp"
+
+#include <functional>
+#include <new>
+#include <utility>
 
 namespace caf {
 
@@ -51,6 +51,10 @@ public:
 private:
   std::tuple<Ts...>* storage_;
 };
+
+/// Convenience alias for `function_view_storage<T>::type`.
+template <class T>
+using function_view_storage_t = typename function_view_storage<T>::type;
 
 struct CAF_CORE_EXPORT function_view_storage_catch_all {
   message* storage_;
@@ -166,8 +170,7 @@ public:
       function_view_result<value_type> result;
       self_->request(impl_, timeout, std::forward<Ts>(xs)...)
         .receive([&](error& x) { err = std::move(x); },
-                 typename function_view_storage<value_type>::type{
-                   result.value});
+                 function_view_storage_t<value_type>{result.value});
       if (err)
         return result_type{err};
       else

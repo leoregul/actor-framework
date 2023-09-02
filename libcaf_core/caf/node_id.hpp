@@ -4,11 +4,6 @@
 
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <functional>
-#include <string>
-
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -18,6 +13,11 @@
 #include "caf/none.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/uri.hpp"
+
+#include <array>
+#include <cstdint>
+#include <functional>
+#include <string>
 
 namespace caf {
 
@@ -159,9 +159,7 @@ public:
   template <class Inspector>
   friend bool inspect(Inspector& f, node_id& x) {
     auto is_present = [&x] { return x.data_ != nullptr; };
-    auto get = [&]() -> const auto& {
-      return x.data_->content;
-    };
+    auto get = [&]() -> const auto& { return x.data_->content; };
     auto reset = [&x] { x.data_.reset(); };
     auto set = [&x](node_id_data::variant_type&& val) {
       if (x.data_ && x.data_->unique())

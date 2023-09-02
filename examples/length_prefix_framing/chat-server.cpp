@@ -1,11 +1,12 @@
 // Simple chat server with a binary protocol.
 
+#include "caf/net/lp/with.hpp"
+#include "caf/net/middleman.hpp"
+
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/net/lp/with.hpp"
-#include "caf/net/middleman.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/uuid.hpp"
 
@@ -41,7 +42,7 @@ void worker_impl(caf::event_based_actor* self,
   // add this ID to the input to tag it.
   using message_t = std::pair<caf::uuid, lp::frame>;
   // Allows us to push new flows into the central merge point.
-  caf::flow::item_publisher<caf::flow::observable<message_t>> pub{self};
+  caf::flow::multicaster<caf::flow::observable<message_t>> pub{self};
   // Our central merge point combines all inputs into a single, shared flow.
   auto messages = pub.as_observable().merge().share();
   // Have one subscription for debug output. This also makes sure that the

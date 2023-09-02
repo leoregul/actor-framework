@@ -4,13 +4,6 @@
 
 #pragma once
 
-#include <chrono>
-#include <cstddef>
-#include <memory>
-#include <string_view>
-#include <tuple>
-#include <utility>
-
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/detail/as_mutable_ref.hpp"
 #include "caf/detail/parse.hpp"
@@ -25,6 +18,13 @@
 #include "caf/optional.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
+
+#include <chrono>
+#include <cstddef>
+#include <memory>
+#include <string_view>
+#include <tuple>
+#include <utility>
 
 namespace caf::detail {
 
@@ -53,9 +53,9 @@ constexpr bool assertion_failed_v = false;
 template <class Inspector, class Set, class ValueType>
 auto bind_setter(Inspector& f, Set& set, ValueType& tmp) {
   using set_result_type = decltype(set(std::move(tmp)));
-  if constexpr (std::is_same<set_result_type, bool>::value) {
+  if constexpr (std::is_same_v<set_result_type, bool>) {
     return [&] { return set(std::move(tmp)); };
-  } else if constexpr (std::is_same<set_result_type, error>::value) {
+  } else if constexpr (std::is_same_v<set_result_type, error>) {
     return [&] {
       if (auto err = set(std::move(tmp)); !err) {
         return true;
@@ -65,7 +65,7 @@ auto bind_setter(Inspector& f, Set& set, ValueType& tmp) {
       }
     };
   } else {
-    static_assert(std::is_same<set_result_type, void>::value,
+    static_assert(std::is_same_v<set_result_type, void>,
                   "a setter must return caf::error, bool or void");
     return [&] {
       set(std::move(tmp));
@@ -126,13 +126,13 @@ bool load(Inspector& f, T& x, inspector_access_type::list) {
 }
 
 template <class Inspector, class T>
-std::enable_if_t<accepts_opaque_value<Inspector, T>::value, bool>
+std::enable_if_t<accepts_opaque_value_v<Inspector, T>, bool>
 load(Inspector& f, T& x, inspector_access_type::none) {
   return f.opaque_value(x);
 }
 
 template <class Inspector, class T>
-std::enable_if_t<!accepts_opaque_value<Inspector, T>::value, bool>
+std::enable_if_t<!accepts_opaque_value_v<Inspector, T>, bool>
 load(Inspector&, T&, inspector_access_type::none) {
   static_assert(
     detail::assertion_failed_v<T>,
@@ -219,13 +219,13 @@ bool save(Inspector& f, T& x, inspector_access_type::list) {
 }
 
 template <class Inspector, class T>
-std::enable_if_t<accepts_opaque_value<Inspector, T>::value, bool>
+std::enable_if_t<accepts_opaque_value_v<Inspector, T>, bool>
 save(Inspector& f, T& x, inspector_access_type::none) {
   return f.opaque_value(x);
 }
 
 template <class Inspector, class T>
-std::enable_if_t<!accepts_opaque_value<Inspector, T>::value, bool>
+std::enable_if_t<!accepts_opaque_value_v<Inspector, T>, bool>
 save(Inspector&, T&, inspector_access_type::none) {
   static_assert(
     detail::assertion_failed_v<T>,
@@ -240,7 +240,7 @@ bool save(Inspector& f, T& x) {
 
 template <class Inspector, class T>
 bool save(Inspector& f, const T& x) {
-  if constexpr (!std::is_function<T>::value) {
+  if constexpr (!std::is_function_v<T>) {
     return save(f, as_mutable_ref(x), inspect_access_type<Inspector, T>());
   } else {
     // Only inspector such as the stringification_inspector are going to accept
@@ -396,7 +396,10 @@ struct optional_inspector_access {
   template <class Inspector, class IsPresent, class Get>
   static bool save_field(Inspector& f, std::string_view field_name,
                          IsPresent& is_present, Get& get) {
-    return detail::save_field(f, field_name, is_present, get);
+    auto deref_get = [&get]() -> decltype(auto) {
+      return traits::deref_save(get());
+    };
+    return detail::save_field(f, field_name, is_present, deref_get);
   }
 
   template <class Inspector, class IsValid, class SyncValue>

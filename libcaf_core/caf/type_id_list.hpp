@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <string>
-
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <string>
 
 namespace caf {
 
@@ -146,7 +146,7 @@ struct to_type_id_list_helper;
 template <class... Ts>
 struct to_type_id_list_helper<type_list<Ts...>> {
   static constexpr type_id_list get() {
-    return make_type_id_list<typename strip_param<Ts>::type...>();
+    return make_type_id_list<strip_param_t<Ts>...>();
   }
 };
 

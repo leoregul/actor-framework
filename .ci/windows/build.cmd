@@ -1,5 +1,3 @@
-call "c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x86_amd64
-
 cmake.exe ^
   -S . ^
   -B build ^
@@ -9,6 +7,6 @@ cmake.exe ^
   -DBUILD_SHARED_LIBS=OFF ^
   -DCMAKE_C_COMPILER=cl.exe ^
   -DCMAKE_CXX_COMPILER=cl.exe ^
-  -DOPENSSL_ROOT_DIR="C:\Program Files\OpenSSL-Win64"
+  -DCMAKE_CXX_FLAGS="/WX"
 
-cmake.exe --build build --parallel %CIRRUS_CPU% --target install --config debug || exit \b 1
+cmake.exe --build build --parallel %NUMBER_OF_PROCESSORS% --target install --config debug || exit \b 1

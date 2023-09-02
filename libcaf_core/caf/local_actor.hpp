@@ -4,13 +4,6 @@
 
 #pragma once
 
-#include <atomic>
-#include <cstdint>
-#include <exception>
-#include <functional>
-#include <type_traits>
-#include <utility>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/abstract_group.hpp"
 #include "caf/actor.hpp"
@@ -39,6 +32,13 @@
 #include "caf/timespan.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_response_promise.hpp"
+
+#include <atomic>
+#include <cstdint>
+#include <exception>
+#include <functional>
+#include <type_traits>
+#include <utility>
 
 namespace caf {
 
@@ -342,7 +342,7 @@ public:
   /// is equivalent to `make_response_promise<int, int>()`.
   template <class... Ts>
   detail::response_promise_t<Ts...> make_response_promise() {
-    using result_t = typename detail::make_response_promise_helper<Ts...>::type;
+    using result_t = detail::make_response_promise_helper_t<Ts...>;
     if (current_element_ != nullptr && !current_element_->mid.is_answered()) {
       auto result = result_t{this, *current_element_};
       current_element_->mid.mark_as_answered();
@@ -407,9 +407,9 @@ public:
 
   template <message_priority P = message_priority::normal, class Handle = actor,
             class... Ts>
-  typename response_type<typename Handle::signatures,
-                         detail::implicit_conversions_t<
-                           typename std::decay<Ts>::type>...>::delegated_type
+  typename response_type<
+    typename Handle::signatures,
+    detail::implicit_conversions_t<std::decay_t<Ts>>...>::delegated_type
   delegate(const Handle& dest, Ts&&... xs) {
     auto rp = make_response_promise();
     return rp.template delegate<P>(dest, std::forward<Ts>(xs)...);

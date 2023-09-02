@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -11,8 +13,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include "caf/detail/core_export.hpp"
 
 namespace caf {
 
@@ -74,6 +74,7 @@ class [[deprecated("use std::string_view instead")]] string_view;
 class [[nodiscard]] error;
 class abstract_actor;
 class abstract_group;
+class abstract_mailbox;
 class action;
 class actor;
 class actor_addr;
@@ -215,14 +216,6 @@ class fnv;
 
 } // namespace hash
 
-// -- intrusive containers -----------------------------------------------------
-
-namespace intrusive {
-
-enum class task_result;
-
-} // namespace intrusive
-
 // -- marker classes for mixins ------------------------------------------------
 
 namespace mixin {
@@ -275,6 +268,8 @@ using int_gauge_family = metric_family_impl<int_gauge>;
 
 namespace detail {
 
+class mailbox_factory;
+
 template <class>
 struct gauge_oracle;
 
@@ -288,12 +283,16 @@ struct gauge_oracle<int64_t> {
   using type = telemetry::int_gauge;
 };
 
+/// Convenience alias for `detail::gauge_oracle<ValueType>::type`.
+template <class ValueType>
+using gauge_oracle_t = typename gauge_oracle<ValueType>::type;
+
 } // namespace detail
 
 namespace telemetry {
 
 template <class ValueType>
-using gauge = typename detail::gauge_oracle<ValueType>::type;
+using gauge = detail::gauge_oracle_t<ValueType>;
 
 } // namespace telemetry
 

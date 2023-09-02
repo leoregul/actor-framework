@@ -4,17 +4,6 @@
 
 #pragma once
 
-#include <array>
-#include <atomic>
-#include <condition_variable>
-#include <cstddef>
-#include <functional>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <typeinfo>
-
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
@@ -40,6 +29,17 @@
 #include "caf/string_algorithms.hpp"
 #include "caf/telemetry/metric_registry.hpp"
 #include "caf/type_id.hpp"
+
+#include <array>
+#include <atomic>
+#include <condition_variable>
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <typeinfo>
 
 namespace caf::detail {
 
@@ -260,8 +260,7 @@ public:
   /// A message passing interface (MPI) in run-time checkable representation.
   using mpi = std::set<std::string>;
 
-  template <class T,
-            class E = typename std::enable_if<!is_typed_actor<T>::value>::type>
+  template <class T, class E = std::enable_if_t<!is_typed_actor_v<T>>>
   mpi message_types(detail::type_list<T>) const {
     return mpi{};
   }
@@ -273,9 +272,7 @@ public:
     return result;
   }
 
-  template <class T,
-            class E
-            = typename std::enable_if<!detail::is_type_list<T>::value>::type>
+  template <class T, class E = std::enable_if_t<!detail::is_type_list_v<T>>>
   mpi message_types(const T&) const {
     detail::type_list<T> token;
     return message_types(token);
@@ -398,6 +395,7 @@ public:
   infer_handle_from_class_t<C> spawn(Ts&&... xs) {
     check_invariants<C>();
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_impl<C, Os>(cfg, detail::spawn_fwd<Ts>(xs)...);
   }
 
@@ -436,6 +434,7 @@ public:
     static_assert(spawnable,
                   "cannot spawn function-based actor with given arguments");
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_functor<Os>(detail::bool_token<spawnable>{}, cfg, fun,
                              std::forward<Ts>(xs)...);
   }
@@ -443,8 +442,7 @@ public:
   /// Returns a new actor with run-time type `name`, constructed
   /// with the arguments stored in `args`.
   /// @experimental
-  template <class Handle,
-            class E = typename std::enable_if<is_handle<Handle>::value>::type>
+  template <class Handle, class E = std::enable_if_t<is_handle_v<Handle>>>
   expected<Handle>
   spawn(const std::string& name, message args, execution_unit* ctx = nullptr,
         bool check_interface = true, const mpi* expected_ifs = nullptr) {
@@ -465,7 +463,7 @@ public:
   template <class T, spawn_options Os, class Iter, class... Ts>
   infer_handle_from_class_t<T>
   spawn_class_in_groups(actor_config& cfg, Iter first, Iter last, Ts&&... xs) {
-    static_assert(std::is_same<infer_handle_from_class_t<T>, actor>::value,
+    static_assert(std::is_same_v<infer_handle_from_class_t<T>, actor>,
                   "only dynamically-typed actors can be spawned in a group");
     check_invariants<T>();
     auto irange = make_input_range(first, last);
@@ -500,6 +498,7 @@ public:
   infer_handle_from_fun_t<F>
   spawn_in_groups(std::initializer_list<group> gs, F fun, Ts&&... xs) {
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_fun_in_groups<Os>(cfg, gs.begin(), gs.end(), fun,
                                    std::forward<Ts>(xs)...);
   }
@@ -508,6 +507,7 @@ public:
   template <spawn_options Os = no_spawn_options, class Gs, class F, class... Ts>
   infer_handle_from_fun_t<F> spawn_in_groups(const Gs& gs, F fun, Ts&&... xs) {
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_fun_in_groups<Os>(cfg, gs.begin(), gs.end(), fun,
                                    std::forward<Ts>(xs)...);
   }
@@ -524,6 +524,7 @@ public:
   infer_handle_from_class_t<T>
   spawn_in_groups(std::initializer_list<group> gs, Ts&&... xs) {
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_class_in_groups<T, Os>(cfg, gs.begin(), gs.end(),
                                         std::forward<Ts>(xs)...);
   }
@@ -532,6 +533,7 @@ public:
   template <class T, spawn_options Os = no_spawn_options, class Gs, class... Ts>
   infer_handle_from_class_t<T> spawn_in_groups(const Gs& gs, Ts&&... xs) {
     actor_config cfg;
+    cfg.mbox_factory = mailbox_factory();
     return spawn_class_in_groups<T, Os>(cfg, gs.begin(), gs.end(),
                                         std::forward<Ts>(xs)...);
   }
@@ -696,6 +698,7 @@ public:
                   "only scheduled actors may get spawned inactively");
     CAF_SET_LOGGER_SYS(this);
     actor_config cfg{dummy_execution_unit(), nullptr};
+    cfg.mbox_factory = mailbox_factory();
     auto res = make_actor<Impl>(next_actor_id(), node(), this, cfg,
                                 std::forward<Ts>(xs)...);
     auto ptr = static_cast<Impl*>(actor_cast<abstract_actor*>(res));
@@ -771,7 +774,7 @@ public:
 private:
   template <class T>
   void check_invariants() {
-    static_assert(!std::is_base_of<prohibit_top_level_spawn_marker, T>::value,
+    static_assert(!std::is_base_of_v<prohibit_top_level_spawn_marker, T>,
                   "This actor type cannot be spawned through an actor system. "
                   "Probably you have tried to spawn a broker.");
   }
@@ -789,6 +792,8 @@ private:
   void config_serv(strong_actor_ptr x) {
     config_serv_ = std::move(x);
   }
+
+  detail::mailbox_factory* mailbox_factory();
 
   // -- member variables -------------------------------------------------------
 

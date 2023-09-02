@@ -4,18 +4,18 @@
 
 #pragma once
 
-#include <algorithm>
-#include <chrono>
-#include <cstddef>
-#include <deque>
-#include <limits>
-
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/test_actor_clock.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
+
+#include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <deque>
+#include <limits>
 
 namespace caf::scheduler {
 
@@ -48,7 +48,7 @@ public:
   /// Peeks into the mailbox of `next_job<scheduled_actor>()`.
   template <class... Ts>
   decltype(auto) peek() {
-    auto ptr = next_job<scheduled_actor>().mailbox().peek();
+    auto ptr = next_job<scheduled_actor>().peek_at_next_mailbox_element();
     CAF_ASSERT(ptr != nullptr);
     if (auto view = make_const_typed_message_view<Ts...>(ptr->payload)) {
       if constexpr (sizeof...(Ts) == 1)
