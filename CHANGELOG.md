@@ -6,6 +6,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+## [0.19.3] - 2023-09-20
+
 ### Added
 
 - The class `caf::telemetry::label` now has a new `compare` overload that
@@ -25,6 +27,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   member function: `observe_on`. It converts the publisher back into an
   observable. This new abstraction allows users to set up asynchronous flows
   without having to manually deal with SPSC buffers.
+- The flow API received additional operators: `first`, `last`, `take_last`,
+  `skip_last`, `element_at`, and `ignore_elements`.
 
 ### Changed
 
@@ -43,6 +47,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - When implementing custom protocol layers that sit on top of an octet stream,
   the `delta` byte span passed to `consume` now resets whenever returning a
   positive value from `consume`.
+- When constructing a `behavior` or `message_handler`, callbacks that take a
+  `message` argument are now treated as catch-all handlers.
+- When creating a message with a non-existing type ID, CAF now prints a
+  human-readable error message and calls `abort` instead of crashing the
+  application.
 
 ### Fixed
 
@@ -57,6 +66,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   and attempt to buffer all values indefinitely.
 - The comparison operator of `intrusive_ptr` no longer accidentally creates new
   `intrusive_ptr` instances when comparing to raw pointers.
+- Fix function object lifetimes in actions. This bug caused CAF to hold onto a
+  strong reference to actors that canceled a timeout until the timeout expired.
+  This could lead to actors being kept alive longer than necessary (#698).
+- Key lookups in `caf::net::http::request_header` are now case-insensitive, as
+  required by the HTTP specification. Further, `field_at` is now a `const`
+  member function (#1554).
 
 ## [0.19.2] - 2023-06-13
 
@@ -1052,7 +1067,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.2...master
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.3...master
+[0.19.3]: https://github.com/actor-framework/actor-framework/releases/0.19.3
 [0.19.2]: https://github.com/actor-framework/actor-framework/releases/0.19.2
 [0.19.1]: https://github.com/actor-framework/actor-framework/releases/0.19.1
 [0.19.0]: https://github.com/actor-framework/actor-framework/releases/0.19.0

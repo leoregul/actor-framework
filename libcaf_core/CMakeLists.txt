@@ -72,6 +72,7 @@ caf_add_component(
     caf/abstract_mailbox.cpp
     caf/action.cpp
     caf/action.test.cpp
+    caf/delegate.test.cpp
     caf/actor.cpp
     caf/actor_addr.cpp
     caf/actor_clock.cpp
@@ -91,6 +92,7 @@ caf_add_component(
     caf/async/producer.cpp
     caf/attachable.cpp
     caf/behavior.cpp
+    caf/behavior.test.cpp
     caf/binary_deserializer.cpp
     caf/binary_serializer.cpp
     caf/blocking_actor.cpp
@@ -250,7 +252,6 @@ caf_add_component(
     async.promise
     async.publisher
     async.spsc_buffer
-    behavior
     binary_deserializer
     binary_serializer
     blocking_actor
@@ -395,3 +396,10 @@ endif()
 if(CAF_ENABLE_TESTING AND CAF_ENABLE_EXCEPTIONS)
   caf_add_legacy_test_suites(caf-core-legacy-test custom_exception_handler)
 endif()
+
+caf_add_test_executable(
+  caf-core-logging-driver
+  SOURCES
+    tests/integration/logging.cpp
+  DEPENDENCIES
+    CAF::core)
