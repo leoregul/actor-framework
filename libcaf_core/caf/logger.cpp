@@ -57,8 +57,8 @@ struct print_adapter {
 };
 
 constexpr std::string_view log_level_name[] = {
-  "QUIET", "",     "", "ERROR", "",      "", "WARN", "",
-  "",      "INFO", "", "",      "DEBUG", "", "",     "TRACE",
+  "Q", "",     "", "E", "",      "", "W", "",
+  "",      "I", "", "",      "D", "", "",     "T",
 };
 
 constexpr std::string_view fun_prefixes[] = {
@@ -286,6 +286,19 @@ public:
     detail::print(adapter, x);
   }
 
+  /// Renders the time of `x`.
+  static void render_time(std::ostream& out, timestamp x) {
+    std::stringstream date_stream;
+    print_adapter adapter{date_stream};
+    detail::print(adapter, x);
+    auto time_str = date_stream.str();
+    auto t_pos = time_str.find_first_of("T");
+    if (t_pos != std::string::npos) {
+      time_str = time_str.substr(t_pos + 1);
+    }
+    out << time_str;
+  }
+
   /// Parses `format_str` into a format description vector.
   /// @warning The returned vector can have pointers into `format_str`.
   static line_format parse_format(const std::string& format_str) {
@@ -301,7 +314,8 @@ public:
         case 'c': ft = category_field;     break;
         case 'C': ft = class_name_field;   break;
         case 'd': ft = date_field;         break;
-        case 'F': ft =  file_field;        break;
+        case 'T': ft = time_field;         break;
+        case 'F': ft = file_field;         break;
         case 'L': ft = line_field;         break;
         case 'm': ft = message_field;      break;
         case 'M': ft = method_field;       break;
@@ -348,6 +362,7 @@ public:
       case category_field:     out << x.category_name;             break;
       case class_name_field:   render_fun_prefix(out, x);          break;
       case date_field:         render_date(out, x.tstamp);         break;
+      case time_field:         render_time(out, x.tstamp);         break;
       case file_field:         out << x.file_name;                 break;
       case line_field:         out << x.line_number;               break;
       case message_field:      out << x.message;                   break;
@@ -432,6 +447,9 @@ public:
       std::cerr << "unable to open log file " << file_name_ << std::endl;
       return false;
     }
+    auto t = std::time(NULL);
+    tm *now = std::gmtime(&t);
+    current_day_ = now->tm_mday;
     return true;
   }
 
@@ -524,6 +542,9 @@ public:
     if (!open_file() && console_verbosity() == CAF_LOG_LEVEL_QUIET)
       return;
     log_first_line();
+
+    auto is_log_rotation_enabled = get_or(system_.config(), "without-log-rotation", "false") == "false";
+
     // Loop until receiving an empty message.
     for (;;) {
       // Handle current head of the queue.
@@ -536,6 +557,22 @@ public:
       // Prepare next iteration.
       queue_.pop_front();
       queue_.wait_nonempty();
+
+      if (file_verbosity() > CAF_LOG_LEVEL_QUIET && is_log_rotation_enabled && !file_name_.empty()) {
+        auto t = std::time(NULL);
+        tm *now = std::gmtime(&t);
+        if (current_day_ != now->tm_mday) {
+          // log_last_line();
+          file_.close();
+          t0_ = make_timestamp();
+          if (!init_file_name())
+            return;
+          if (open_file())
+            log_first_line();
+          else if (console_verbosity() == CAF_LOG_LEVEL_QUIET)
+            return;
+        }
+      }
     }
   }
 
@@ -543,36 +580,8 @@ public:
     parent_thread_ = std::this_thread::get_id();
     if (verbosity() == CAF_LOG_LEVEL_QUIET)
       return;
-    file_name_ = get_or(system_.config(), "caf.logger.file.path",
-                        defaults::logger::file::path);
-    if (file_name_.empty()) {
-      // No need to continue if console and log file are disabled.
-      if (console_verbosity() == CAF_LOG_LEVEL_QUIET)
-        return;
-    } else {
-      // Replace placeholders.
-      const char pid[] = "[PID]";
-      auto i = std::search(file_name_.begin(), file_name_.end(),
-                           std::begin(pid), std::end(pid) - 1);
-      if (i != file_name_.end()) {
-        auto id = std::to_string(detail::get_process_id());
-        file_name_.replace(i, i + sizeof(pid) - 1, id);
-      }
-      const char ts[] = "[TIMESTAMP]";
-      i = std::search(file_name_.begin(), file_name_.end(), std::begin(ts),
-                      std::end(ts) - 1);
-      if (i != file_name_.end()) {
-        auto t0_str = timestamp_to_string(t0_);
-        file_name_.replace(i, i + sizeof(ts) - 1, t0_str);
-      }
-      const char node[] = "[NODE]";
-      i = std::search(file_name_.begin(), file_name_.end(), std::begin(node),
-                      std::end(node) - 1);
-      if (i != file_name_.end()) {
-        auto nid = to_string(system_.node());
-        file_name_.replace(i, i + sizeof(node) - 1, nid);
-      }
-    }
+    if (!init_file_name())
+      return;
     if (cfg_.inline_output) {
       // Open file immediately for inline output.
       open_file();
@@ -602,6 +611,66 @@ public:
     queue_.push_back(event{});
     thread_.join();
   }
+
+bool init_file_name() {
+  file_name_ = get_or(system_.config(), "caf.logger.file.path",
+                      defaults::logger::file::path);
+  if (file_name_.empty()) {
+    // No need to continue if console and log file are disabled.
+    if (console_verbosity() == CAF_LOG_LEVEL_QUIET)
+      return false;
+  } else {
+    // Replace placeholders.
+    const char cdn_id[] = "[CDN]";
+    auto i = std::search(file_name_.begin(), file_name_.end(), std::begin(cdn_id),
+                         std::end(cdn_id) - 1);
+    if (i != file_name_.end()) {
+      auto id = get_or(system_.config(), "cdn-id", "0");
+      file_name_.replace(i, i + sizeof(cdn_id) - 1, id);
+    }
+    const char pid[] = "[PID]";
+    i = std::search(file_name_.begin(), file_name_.end(), std::begin(pid),
+                         std::end(pid) - 1);
+    if (i != file_name_.end()) {
+      auto id = std::to_string(detail::get_process_id());
+      file_name_.replace(i, i + sizeof(pid) - 1, id);
+    }
+    const char ts[] = "[TIMESTAMP]";
+    i = std::search(file_name_.begin(), file_name_.end(), std::begin(ts),
+                    std::end(ts) - 1);
+    if (i != file_name_.end()) {
+      auto t0_str = timestamp_to_string(t0_);
+      file_name_.replace(i, i + sizeof(ts) - 1, t0_str);
+    }
+    const char date[] = "[DATE]";
+    i = std::search(file_name_.begin(), file_name_.end(), std::begin(date),
+                    std::end(date) - 1);
+    if (i != file_name_.end()) {
+      std::stringstream date_stream;
+      render_date(date_stream, t0_);
+      auto date_str = date_stream.str();
+      auto t_pos = date_str.find_first_of("T");
+      date_str = date_str.substr(0, t_pos);
+      file_name_.replace(i, i + sizeof(date) - 1, date_str);
+    }
+    const char datetime[] = "[DATETIME]";
+    i = std::search(file_name_.begin(), file_name_.end(), std::begin(datetime),
+                    std::end(datetime) - 1);
+    if (i != file_name_.end()) {
+      std::stringstream date_stream;
+      render_date(date_stream, t0_);
+      file_name_.replace(i, i + sizeof(datetime) - 1, date_stream.str());
+    }
+    const char node[] = "[NODE]";
+    i = std::search(file_name_.begin(), file_name_.end(), std::begin(node),
+                    std::end(node) - 1);
+    if (i != file_name_.end()) {
+      auto nid = to_string(system_.node());
+      file_name_.replace(i, i + sizeof(node) - 1, nid);
+    }
+  }
+  return true;
+}
 
   // -- member variables -------------------------------------------------------
 
@@ -644,6 +713,8 @@ public:
 
   // References the parent system.
   actor_system& system_;
+
+  int current_day_{0};
 };
 
 } // namespace

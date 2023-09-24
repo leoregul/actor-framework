@@ -106,6 +106,7 @@ public:
     category_field,
     class_name_field,
     date_field,
+    time_field,
     file_field,
     line_field,
     message_field,
