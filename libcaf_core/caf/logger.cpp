@@ -296,6 +296,11 @@ public:
     if (t_pos != std::string::npos) {
       time_str = time_str.substr(t_pos + 1);
     }
+    auto d_pos = time_str.find_first_of(".");
+    auto len = d_pos + 4;
+    if (d_pos != std::string::npos && time_str.length() > len) {
+      time_str = time_str.substr(0, len);
+    }
     out << time_str;
   }
 
